@@ -98,7 +98,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   );
 };
 
-// --- Route Guard ---
+// --- Route Guards ---
+
+// 1. ProtectedRoute: Only allows authenticated users
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -114,6 +116,17 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// 2. PublicRoute: Only allows guests (redirects to Home if logged in)
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null; // Or a minimal spinner
+
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+// 3. AdminRoute: Only allows Admin
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -129,9 +142,19 @@ const App: React.FC = () => {
       <HashRouter>
         <Layout>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            {/* Public Routes (Login/Register) - Redirects to Home if already logged in */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } />
+            <Route path="/register" element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            } />
             
+            {/* Protected Routes */}
             <Route path="/" element={
               <ProtectedRoute>
                 <Vote />
@@ -161,6 +184,9 @@ const App: React.FC = () => {
                 <Admin />
               </AdminRoute>
             } />
+
+            {/* Catch all - Redirect to Home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
       </HashRouter>
