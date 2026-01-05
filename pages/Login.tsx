@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthService } from '../services/mockService';
 import { useAuth } from '../App';
@@ -12,7 +12,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,6 +29,12 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useLayoutEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user])
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
