@@ -25,10 +25,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # cache: 'npm' <-- Đã xóa dòng này để tránh lỗi missing lock file
 
       - name: Install dependencies
-        run: npm install # Đổi từ 'npm ci' sang 'npm install' để tự động tạo lockfile nếu thiếu
+        run: npm install
 
       - name: Build
         run: npm run build
