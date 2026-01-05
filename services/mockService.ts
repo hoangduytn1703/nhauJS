@@ -4,7 +4,9 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signOut,
-  updateProfile as updateAuthProfile
+  updateProfile as updateAuthProfile,
+  sendPasswordResetEmail,
+  updatePassword
 } from 'firebase/auth';
 import { 
   collection, 
@@ -85,6 +87,26 @@ export const AuthService = {
       }
       throw new Error(error.message || "Đăng ký thất bại");
     }
+  },
+
+  resetPassword: async (email: string): Promise<void> => {
+      try {
+          await sendPasswordResetEmail(auth, email);
+      } catch (error: any) {
+          throw new Error("Không thể gửi email reset. Kiểm tra lại email!");
+      }
+  },
+
+  changePassword: async (newPassword: string): Promise<void> => {
+      if (!auth.currentUser) throw new Error("Chưa đăng nhập");
+      try {
+          await updatePassword(auth.currentUser, newPassword);
+      } catch (error: any) {
+          if (error.code === 'auth/requires-recent-login') {
+              throw new Error("Bạn cần đăng nhập lại trước khi đổi mật khẩu để bảo mật.");
+          }
+          throw new Error("Đổi mật khẩu thất bại. Mật khẩu quá yếu hoặc lỗi hệ thống.");
+      }
   }
 };
 

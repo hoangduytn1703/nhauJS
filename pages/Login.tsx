@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthService } from '../services/mockService';
 import { useAuth } from '../App';
-import { Beer, Mail, Lock, Eye, EyeOff, CheckSquare, Square } from 'lucide-react';
+import { Beer, Mail, Lock, Eye, EyeOff, CheckSquare, Square, XCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +11,11 @@ const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Forgot Password State
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +33,22 @@ const Login: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!forgotEmail) return alert("Vui lòng nhập email");
+      setSendingReset(true);
+      try {
+          await AuthService.resetPassword(forgotEmail);
+          alert("Đã gửi email reset mật khẩu. Hãy kiểm tra hộp thư (cả mục Spam/Rác).");
+          setShowForgot(false);
+          setForgotEmail('');
+      } catch (e: any) {
+          alert(e.message);
+      } finally {
+          setSendingReset(false);
+      }
   };
 
   return (
@@ -79,42 +100,92 @@ const Login: React.FC = () => {
                </label>
 
                <label className="flex flex-col gap-2">
-                   <span className="text-white text-sm font-bold ml-1">Mật khẩu bí mật</span>
+                   <div className="flex justify-between items-center">
+                       <span className="text-white text-sm font-bold ml-1">Mật khẩu</span>
+                       <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline">Quên mật khẩu?</button>
+                   </div>
                    <div className="relative group">
                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
                        <input 
-                          type={showPass ? "text" : "password"} 
+                          type={showPass ? "text" : "password"}
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-10 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-secondary/30"
-                          placeholder="*******"
+                          className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-12 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-secondary/30"
+                          placeholder="******"
                        />
-                       <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white">
-                           {showPass ? <EyeOff size={20}/> : <Eye size={20}/>}
+                       <button 
+                          type="button"
+                          onClick={() => setShowPass(!showPass)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors"
+                       >
+                           {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                        </button>
                    </div>
                </label>
 
-               <div className="flex items-center gap-2 cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
-                   {rememberMe ? <CheckSquare className="text-primary" size={20}/> : <Square className="text-secondary" size={20}/>}
-                   <span className={`text-sm select-none ${rememberMe ? 'text-white' : 'text-secondary'}`}>Ghi nhớ đăng nhập</span>
+               <div className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setRememberMe(!rememberMe)}>
+                   {rememberMe 
+                     ? <CheckSquare className="text-primary" size={20} /> 
+                     : <Square className="text-secondary" size={20} />
+                   }
+                   <span className="text-sm text-secondary select-none">Duy trì đăng nhập</span>
                </div>
 
                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="mt-2 w-full h-12 bg-primary text-background text-base font-bold rounded-full hover:bg-primary-hover active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(244,140,37,0.25)] flex items-center justify-center gap-2"
-                >
-                  {loading ? 'Đang rót...' : 'Zô 100% (Đăng nhập)'}
+                   type="submit" 
+                   disabled={loading}
+                   className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+               >
+                   {loading ? 'Đang vào bàn...' : 'Vào Tiệc Ngay'}
                </button>
            </form>
-           
-           <div className="mt-6 md:hidden text-center">
-             <Link to="/register" className="text-primary font-bold hover:underline">Chưa có vé? Đăng ký ngay</Link>
+
+           <div className="text-center mt-6 md:hidden">
+               <p className="text-sm text-secondary">
+                   Chưa có vé? <Link to="/register" className="text-primary font-bold hover:underline">Đăng ký ngay</Link>
+               </p>
            </div>
         </div>
+
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                  <button 
+                      onClick={() => setShowForgot(false)}
+                      className="absolute top-4 right-4 text-secondary hover:text-white"
+                  >
+                      <XCircle size={24} />
+                  </button>
+                  
+                  <h3 className="text-xl font-bold text-white mb-2">Quên mật khẩu?</h3>
+                  <p className="text-secondary text-sm mb-6">Nhập email để nhận link đặt lại mật khẩu mới.</p>
+                  
+                  <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                      <input 
+                          type="email"
+                          required
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
+                          placeholder="Nhập email của bạn"
+                          autoFocus
+                      />
+                      
+                      <button 
+                          type="submit"
+                          disabled={sendingReset}
+                          className="w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all"
+                      >
+                          {sendingReset ? 'Đang gửi...' : 'Gửi Link Reset'}
+                      </button>
+                  </form>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
