@@ -18,6 +18,14 @@ const Register: React.FC = () => {
     setLoading(true);
     setError('');
     
+    // Validate Name (Latin characters only, 3-50 chars)
+    const nameRegex = /^[\p{L}\s]{3,50}$/u;
+    if (!nameRegex.test(name.trim())) {
+        setError("Tên hiển thị chỉ được chứa chữ cái, độ dài 3-50 ký tự");
+        setLoading(false);
+        return;
+    }
+
     if (password.length < 6) {
         setError("Mật khẩu phải có ít nhất 6 ký tự");
         setLoading(false);

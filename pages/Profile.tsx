@@ -14,12 +14,25 @@ const Profile: React.FC = () => {
 
   const handleSave = async () => {
       // 1. Validation Logic
-      if (!formData.nickname?.trim()) {
+      const nameRegex = /^[\p{L}\s]{3,50}$/u;
+
+      const nickname = formData.nickname?.trim() || '';
+      if (!nickname) {
           alert('Vui lòng nhập "Biệt danh trên bàn nhậu"!');
           return;
       }
-      if (!formData.name?.trim()) {
+      if (!nameRegex.test(nickname)) {
+          alert('Biệt danh chỉ được chứa chữ cái, độ dài từ 3-50 ký tự.');
+          return;
+      }
+
+      const realName = formData.name?.trim() || '';
+      if (!realName) {
           alert('Vui lòng nhập "Tên thật"!');
+          return;
+      }
+      if (!nameRegex.test(realName)) {
+          alert('Tên thật chỉ được chứa chữ cái, độ dài từ 3-50 ký tự.');
           return;
       }
 
