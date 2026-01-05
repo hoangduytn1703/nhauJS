@@ -84,11 +84,12 @@ const Login: React.FC = () => {
            {error && <div className="mb-4 p-3 bg-red-900/30 border border-red-800 text-red-200 rounded-lg text-sm">{error}</div>}
 
            <form onSubmit={handleLogin} className="flex flex-col gap-5">
-               <label className="flex flex-col gap-2">
-                   <span className="text-white text-sm font-bold ml-1">Email chiến hữu</span>
+               <div className="flex flex-col gap-2">
+                   <label htmlFor="email-input" className="text-white text-sm font-bold ml-1 cursor-pointer">Email chiến hữu</label>
                    <div className="relative group">
                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
                        <input 
+                          id="email-input"
                           type="email" 
                           required
                           value={email}
@@ -97,16 +98,17 @@ const Login: React.FC = () => {
                           placeholder="Nhập email"
                        />
                    </div>
-               </label>
+               </div>
 
-               <label className="flex flex-col gap-2">
+               <div className="flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                       <span className="text-white text-sm font-bold ml-1">Mật khẩu</span>
+                       <label htmlFor="password-input" className="text-white text-sm font-bold ml-1 cursor-pointer">Mật khẩu</label>
                        <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline">Quên mật khẩu?</button>
                    </div>
                    <div className="relative group">
                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
                        <input 
+                          id="password-input"
                           type={showPass ? "text" : "password"}
                           required
                           value={password}
@@ -116,13 +118,17 @@ const Login: React.FC = () => {
                        />
                        <button 
                           type="button"
-                          onClick={() => setShowPass(!showPass)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors"
+                          onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowPass(!showPass);
+                          }}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors z-10 p-1"
                        >
                            {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                        </button>
                    </div>
-               </label>
+               </div>
 
                <div className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setRememberMe(!rememberMe)}>
                    {rememberMe 
