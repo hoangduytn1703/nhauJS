@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
 import { Poll, User, PollOption } from '../types';
 import { useAuth } from '../App';
-import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink } from 'lucide-react';
+import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Vote: React.FC = () => {
@@ -20,6 +20,12 @@ const Vote: React.FC = () => {
 
   // Warning state
   const [warningMsg, setWarningMsg] = useState<{pollId: string, msg: string} | null>(null);
+
+  // Add Option State
+  const [addModal, setAddModal] = useState<{show: boolean, pollId: string, type: 'options' | 'timeOptions'}>({show: false, pollId: '', type: 'options'});
+  const [newOptionText, setNewOptionText] = useState('');
+  const [newOptionDesc, setNewOptionDesc] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const fetchData = async () => {
      try {
@@ -87,6 +93,33 @@ const Vote: React.FC = () => {
       const isFinalized = !!poll.finalizedOptionId;
       return deadlinePassed || isFinalized;
   }
+
+  // --- Add Option Logic ---
+  const openAddModal = (pollId: string, type: 'options' | 'timeOptions') => {
+      setAddModal({ show: true, pollId, type });
+      setNewOptionText('');
+      setNewOptionDesc('');
+  };
+
+  const submitNewOption = async () => {
+      if (!user) return;
+      if (!newOptionText.trim()) return alert("Vui lòng nhập thông tin");
+
+      setAdding(true);
+      try {
+          await DataService.addPollOption(addModal.pollId, addModal.type, {
+              text: newOptionText,
+              description: newOptionDesc
+          }, user.id);
+          
+          setAddModal({ ...addModal, show: false });
+          fetchData();
+      } catch (e) {
+          alert("Lỗi khi thêm option");
+      } finally {
+          setAdding(false);
+      }
+  };
 
   // Calculate Time Remaining for the first active poll
   const activePoll = polls.find(p => !isPollEnded(p) && p.status === 'OPEN');
@@ -439,6 +472,19 @@ const Vote: React.FC = () => {
                                             </div>
                                         )
                                    })}
+
+                                   {/* --- ADD TIME BUTTON --- */}
+                                   {!ended && participationStatus === 'JOIN' && (
+                                       <button 
+                                           onClick={() => openAddModal(poll.id, 'timeOptions')}
+                                           className="relative overflow-hidden p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer h-full min-h-[160px]"
+                                       >
+                                           <div className="w-10 h-10 rounded-full bg-surface border border-border group-hover:border-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                                               <Plus size={20} />
+                                           </div>
+                                           <span className="text-xs font-bold text-center">Đề xuất<br/>ngày khác</span>
+                                       </button>
+                                   )}
                                </div>
                            </div>
                        )}
@@ -545,6 +591,20 @@ const Vote: React.FC = () => {
                                       </div>
                                   );
                               })}
+
+                              {/* --- ADD LOCATION BUTTON --- */}
+                              {!ended && participationStatus === 'JOIN' && (
+                                  <button 
+                                    onClick={() => openAddModal(poll.id, 'options')}
+                                    className="group relative flex flex-col items-center justify-center bg-surface/30 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all p-8 min-h-[300px]"
+                                  >
+                                      <div className="w-16 h-16 rounded-full bg-surface border-2 border-border group-hover:border-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors mb-4">
+                                          <Plus size={32} />
+                                      </div>
+                                      <h4 className="text-lg font-bold">Đề xuất quán mới</h4>
+                                      <p className="text-sm opacity-60 mt-1">Biết quán nào ngon? Thêm vào đây!</p>
+                                  </button>
+                              )}
                            </div>
                        </div>
                    </div>
@@ -591,6 +651,69 @@ const Vote: React.FC = () => {
             </section>
         );
       })}
+
+      {/* --- ADD OPTION MODAL --- */}
+      {addModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                  <button 
+                      onClick={() => setAddModal({...addModal, show: false})}
+                      className="absolute top-4 right-4 text-secondary hover:text-white"
+                  >
+                      <XCircle size={24} />
+                  </button>
+                  
+                  <h3 className="text-xl font-bold text-white mb-1">
+                      {addModal.type === 'options' ? 'Thêm Quán Mới' : 'Thêm Ngày Mới'}
+                  </h3>
+                  <p className="text-secondary text-sm mb-6">Đề xuất thêm lựa chọn cho anh em.</p>
+                  
+                  <div className="flex flex-col gap-4">
+                      {addModal.type === 'options' ? (
+                          <>
+                              <label>
+                                  <span className="text-xs font-bold text-white block mb-1">Tên quán</span>
+                                  <input 
+                                      value={newOptionText}
+                                      onChange={(e) => setNewOptionText(e.target.value)}
+                                      className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
+                                      placeholder="VD: Bia Hải Xồm"
+                                      autoFocus
+                                  />
+                              </label>
+                              <label>
+                                  <span className="text-xs font-bold text-white block mb-1">Địa chỉ / Link Map (Tuỳ chọn)</span>
+                                  <input 
+                                      value={newOptionDesc}
+                                      onChange={(e) => setNewOptionDesc(e.target.value)}
+                                      className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
+                                      placeholder="VD: 123 Lê Duẩn..."
+                                  />
+                              </label>
+                          </>
+                      ) : (
+                          <label>
+                              <span className="text-xs font-bold text-white block mb-1">Chọn ngày</span>
+                              <input 
+                                  type="date"
+                                  value={newOptionText}
+                                  onChange={(e) => setNewOptionText(e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none cursor-pointer"
+                              />
+                          </label>
+                      )}
+                      
+                      <button 
+                          onClick={submitNewOption}
+                          disabled={adding}
+                          className="mt-2 w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all"
+                      >
+                          {adding ? 'Đang thêm...' : 'Thêm ngay & Tự động Vote'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

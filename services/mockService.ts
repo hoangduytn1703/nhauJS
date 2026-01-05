@@ -17,7 +17,8 @@ import {
   deleteDoc,
   runTransaction,
   query,
-  orderBy
+  orderBy,
+  arrayUnion
 } from 'firebase/firestore';
 
 export const AuthService = {
@@ -170,6 +171,23 @@ export const DataService = {
       await updateDoc(pollRef, {
           finalizedTimeId: timeId,
           finalizedOptionId: optionId
+      });
+  },
+  
+  // User adds new option (Location or Time)
+  addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string }, userId: string): Promise<void> => {
+      const pollRef = doc(db, "polls", pollId);
+      
+      const newOption: PollOption = {
+          id: `opt_${type === 'options' ? 'loc' : 'time'}_${Date.now()}_user`,
+          text: data.text,
+          description: data.description || '',
+          votes: [userId], // Auto vote for creator
+          image: type === 'options' ? `https://picsum.photos/400/200?random=${Date.now()}` : undefined
+      };
+
+      await updateDoc(pollRef, {
+          [type]: arrayUnion(newOption)
       });
   },
 
