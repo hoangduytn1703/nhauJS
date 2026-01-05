@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/mockService';
 import { User, Poll, PollOption } from '../types';
 import { useAuth } from '../App';
-import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle } from 'lucide-react';
+import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
 
 // Helper to format date for input type="date"
@@ -43,6 +43,8 @@ const Admin: React.FC = () => {
 
   // Delete Confirmation State
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Reopen Confirmation State
+  const [confirmReopenId, setConfirmReopenId] = useState<string | null>(null);
   
   // User Actions State
   const [processingUserId, setProcessingUserId] = useState<string | null>(null);
@@ -230,6 +232,35 @@ const Admin: React.FC = () => {
           setTimeout(() => setConfirmDeleteId(null), 3000);
       }
   }
+
+  // --- REOPEN LOGIC ---
+  const handleReopenPoll = async (poll: Poll) => {
+      const isFinalized = !!poll.finalizedOptionId || !!poll.finalizedTimeId;
+      
+      if (!isFinalized) {
+          // Fallback logic, mainly handled by UI visibility
+          return;
+      }
+
+      // Use UI-based confirmation instead of window.confirm
+      if (confirmReopenId === poll.id) {
+          try {
+              await DataService.updatePoll(poll.id, {
+                  finalizedOptionId: null,
+                  finalizedTimeId: null
+                  // Không gia hạn deadline
+              });
+              refreshData();
+              if (finalizingPollId === poll.id) setFinalizingPollId(null);
+              setConfirmReopenId(null);
+          } catch (e) {
+              console.error(e);
+          }
+      } else {
+          setConfirmReopenId(poll.id);
+          setTimeout(() => setConfirmReopenId(null), 3000);
+      }
+  };
 
   // --- USER MANAGEMENT LOGIC ---
 
@@ -620,201 +651,161 @@ const Admin: React.FC = () => {
                                             <span className="text-secondary text-sm font-mono w-4">{idx + 1}.</span>
                                             <input 
                                                 value={opt.text} 
-                                                onChange={e => handleOptionChange(idx, 'text', e.target.value)}
-                                                className="flex-1 bg-surface border border-border rounded px-3 py-2 text-white focus:border-primary outline-none text-sm font-bold"
-                                                placeholder={`Tên quán...`}
+                                                onChange={e => handleOptionChange(idx, 'text', e.target.value)} 
+                                                className="flex-1 bg-transparent border-b border-border focus:border-primary text-white font-bold outline-none pb-1"
+                                                placeholder={`Địa điểm ${idx + 1}`}
                                             />
                                             {pollOptions.length > 2 && (
-                                                <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500"><Trash2 size={16}/></button>
+                                                <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
                                             )}
                                         </div>
-                                        <div className="flex gap-2 items-center pl-6">
-                                            <MapPin size={14} className="text-secondary" />
-                                            <input 
-                                                value={opt.description} 
-                                                onChange={e => handleOptionChange(idx, 'description', e.target.value)}
-                                                className="flex-1 bg-transparent border-b border-border py-1 text-white focus:border-primary outline-none text-xs placeholder-secondary/50"
-                                                placeholder={`Địa chỉ hoặc link Google Map...`}
-                                            />
-                                        </div>
+                                        <input 
+                                            value={opt.description}
+                                            onChange={e => handleOptionChange(idx, 'description', e.target.value)}
+                                            className="w-full bg-transparent text-xs text-secondary outline-none pl-6"
+                                            placeholder="Địa chỉ, link map, ghi chú..."
+                                        />
                                     </div>
                                 ))}
-                            </div>
-                            <button type="button" onClick={addOption} className="text-primary text-sm font-bold flex items-center gap-1 mt-3 hover:text-primary-hover transition-colors">
-                                <Plus size={16} /> Thêm địa điểm
-                            </button>
-                        </div>
-
-                        <button type="submit" className="mt-4 bg-primary text-background font-bold py-3 rounded-lg hover:bg-primary-hover shadow-lg transition-all active:scale-95">
-                            {editingPollId ? 'Cập nhật kèo' : 'Phát động cuộc nhậu 🍻'}
-                        </button>
-                    </form>
-
-                    {/* Finalize Section inside Edit Form */}
-                    {editingPollId && (
-                        <div className="mt-8 pt-8 border-t border-border">
-                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <Gavel className="text-yellow-500" /> Chốt kèo thủ công
-                            </h3>
-                            <div className="bg-yellow-500/10 border border-yellow-500/30 p-5 rounded-xl">
-                                <p className="text-sm text-yellow-100 mb-4 italic">
-                                    "Quyền lực tối thượng: Chốt kèo ngay lập tức mà không cần chờ đến deadline."
-                                </p>
-                                
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-secondary block mb-1">Ngày chốt</label>
-                                        <select 
-                                            value={selectedFinalTime}
-                                            onChange={e => setSelectedFinalTime(e.target.value)}
-                                            className="w-full bg-background border border-border rounded p-2 text-sm text-white focus:border-yellow-500 outline-none"
-                                        >
-                                            <option value="">-- Tự động (Theo Vote) --</option>
-                                            {/* We use options from the POLL object in state to ensure IDs exist */}
-                                            {polls.find(p => p.id === editingPollId)?.timeOptions?.map((t) => (
-                                                <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} votes)</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-secondary block mb-1">Địa điểm chốt</label>
-                                        <select 
-                                            value={selectedFinalLoc}
-                                            onChange={e => setSelectedFinalLoc(e.target.value)}
-                                            className="w-full bg-background border border-border rounded p-2 text-sm text-white focus:border-yellow-500 outline-none"
-                                        >
-                                            <option value="">-- Tự động (Theo Vote) --</option>
-                                            {polls.find(p => p.id === editingPollId)?.options.map((t) => (
-                                                <option key={t.id} value={t.id}>{t.text} ({t.votes.length} votes)</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <button 
-                                    type="button"
-                                    onClick={() => submitFinalize(editingPollId)}
-                                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2"
-                                >
-                                    <Gavel size={18}/> Chốt kèo này ngay
+                                <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2">
+                                    <Plus size={16} /> Thêm địa điểm
                                 </button>
                             </div>
                         </div>
-                    )}
+
+                        <button type="submit" className="bg-primary hover:bg-primary-hover text-background font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95">
+                            {editingPollId ? 'Cập Nhật Kèo' : 'Lên Bia! 🍻'}
+                        </button>
+                    </form>
                 </div>
 
-                {/* List Existing Polls */}
-                <div className="flex flex-col gap-4">
-                    <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                        <LayoutList className="text-primary"/> Danh sách kèo
-                    </h2>
-                    {polls.length === 0 && <div className="text-secondary italic">Chưa có kèo nào.</div>}
+                {/* List Polls */}
+                <div className="space-y-4">
+                    <h2 className="text-xl font-bold text-white mb-4">Danh sách kèo</h2>
                     {polls.map(poll => {
-                        const expired = poll.deadline > 0 && Date.now() > poll.deadline;
-                        const topTimes = getWinners(poll.timeOptions || []);
-                        const topLocs = getWinners(poll.options);
+                        const isExpired = poll.deadline > 0 && Date.now() > poll.deadline;
+                        const isFinalized = !!poll.finalizedOptionId || !!poll.finalizedTimeId;
 
                         return (
-                        <div key={poll.id} className={`bg-surface p-4 rounded-xl border flex flex-col gap-4 transition-colors ${editingPollId === poll.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1 cursor-pointer" onClick={() => handleEditClick(poll)}>
-                                    <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                                        {poll.title} 
-                                        {poll.finalizedOptionId && <Check size={16} className="text-green-500" />}
-                                    </h3>
-                                    <p className="text-secondary text-sm line-clamp-1 mb-2">{poll.description}</p>
-                                    <div className="flex flex-wrap gap-2 text-xs text-secondary/70">
-                                        <span className="bg-background px-2 py-1 rounded border border-border">{new Date(poll.createdAt).toLocaleDateString('vi-VN')}</span>
-                                        <span className="bg-background px-2 py-1 rounded border border-border">{poll.options.length} quán</span>
-                                        <span className="bg-background px-2 py-1 rounded border border-border flex items-center gap-1">
-                                            <Calendar size={10}/> {(poll.timeOptions || []).length} ngày
-                                        </span>
-                                        {expired && (
-                                            <span className="bg-red-900/30 text-red-300 px-2 py-1 rounded border border-red-900/50 flex items-center gap-1 font-bold">
-                                                <Clock size={10}/> Đã chốt
-                                            </span>
+                            <div key={poll.id} className={`bg-surface border rounded-xl p-5 relative transition-all ${isExpired || isFinalized ? 'border-border opacity-80' : 'border-primary shadow-md'}`}>
+                                {isFinalized && (
+                                    <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
+                                        ĐÃ CHỐT
+                                    </div>
+                                )}
+                                {isExpired && !isFinalized && (
+                                    <div className="absolute top-0 right-0 bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg border border-red-500/30">
+                                        HẾT HẠN
+                                    </div>
+                                )}
+                                
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-bold text-white text-lg">{poll.title}</h3>
+                                </div>
+                                <div className="text-xs text-secondary mb-3 flex flex-col gap-1">
+                                    <div className="flex items-center gap-1">
+                                        <Calendar size={12}/> Tạo: {new Date(poll.createdAt).toLocaleDateString('vi-VN')}
+                                    </div>
+                                    <div className={`flex items-center gap-1 font-bold ${isExpired ? 'text-red-400' : 'text-primary'}`}>
+                                        <Clock size={12}/> Deadline: {poll.deadline ? new Date(poll.deadline).toLocaleString('vi-VN') : 'Không giới hạn'}
+                                    </div>
+                                </div>
+                                
+                                {/* Quick Actions */}
+                                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+                                    <button 
+                                        onClick={() => handleEditClick(poll)}
+                                        className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold"
+                                        title="Chỉnh sửa (Gia hạn/Sửa lỗi)"
+                                    >
+                                        <Edit2 size={14}/> Sửa
+                                    </button>
+
+                                    {/* Finalize Button Toggle */}
+                                    <div className="relative group">
+                                        <button 
+                                            onClick={() => handleFinalizeClick(poll)}
+                                            className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
+                                                isFinalized 
+                                                ? 'bg-yellow-500 text-black hover:bg-yellow-400' 
+                                                : 'bg-green-600 text-white hover:bg-green-500'
+                                            } ${finalizingPollId === poll.id ? 'ring-2 ring-white' : ''}`}
+                                        >
+                                            <Gavel size={14}/> {isFinalized ? 'Sửa Kết Quả' : 'Chốt Kèo'}
+                                        </button>
+                                        
+                                        {/* Dropdown for Finalize */}
+                                        {finalizingPollId === poll.id && (
+                                            <div className="absolute left-0 bottom-full mb-2 bg-background border border-border rounded-xl p-4 shadow-2xl w-64 z-20 animate-in zoom-in-95">
+                                                <h4 className="text-white font-bold text-sm mb-3">Chọn kết quả cuối cùng</h4>
+                                                
+                                                <label className="block mb-2">
+                                                    <span className="text-xs text-secondary block mb-1">Ngày chốt:</span>
+                                                    <select 
+                                                        className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
+                                                        value={selectedFinalTime}
+                                                        onChange={(e) => setSelectedFinalTime(e.target.value)}
+                                                    >
+                                                        <option value="">-- Chưa chốt ngày --</option>
+                                                        {(poll.timeOptions || []).map(t => (
+                                                            <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} vote)</option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+
+                                                <label className="block mb-3">
+                                                    <span className="text-xs text-secondary block mb-1">Địa điểm chốt:</span>
+                                                    <select 
+                                                        className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
+                                                        value={selectedFinalLoc}
+                                                        onChange={(e) => setSelectedFinalLoc(e.target.value)}
+                                                    >
+                                                        <option value="">-- Chưa chốt quán --</option>
+                                                        {poll.options.map(o => (
+                                                            <option key={o.id} value={o.id}>{o.text} ({o.votes.length} vote)</option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => submitFinalize(poll.id)} className="flex-1 bg-primary text-background text-xs font-bold py-2 rounded hover:brightness-110">
+                                                        Xác nhận
+                                                    </button>
+                                                    <button onClick={() => setFinalizingPollId(null)} className="bg-surface border border-border text-xs py-2 px-3 rounded hover:bg-white/10">
+                                                        Huỷ
+                                                    </button>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                                <div className="flex flex-col gap-2 ml-2">
+
+                                    {/* Mở lại button - Chỉ hiện khi đã chốt thủ công */}
+                                    {isFinalized && (
+                                        <button 
+                                            onClick={() => handleReopenPoll(poll)}
+                                            className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
+                                                confirmReopenId === poll.id 
+                                                ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                                                : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
+                                            }`}
+                                            title="Hủy trạng thái đã chốt (Giữ nguyên deadline)"
+                                        >
+                                            <RefreshCw size={14} className={confirmReopenId === poll.id ? "animate-spin" : ""}/> 
+                                            {confirmReopenId === poll.id ? 'Xác nhận?' : 'Mở lại'}
+                                        </button>
+                                    )}
+
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); handleEditClick(poll); }}
-                                        className="p-2 text-secondary hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                                        title="Sửa kèo"
+                                        onClick={() => handleDeletePoll(poll.id)}
+                                        className={`ml-auto p-2 rounded hover:bg-red-500/10 text-secondary hover:text-red-400 transition-all ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : ''}`}
+                                        title="Xóa kèo"
                                     >
-                                        <Edit2 size={18} />
-                                    </button>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); handleDeletePoll(poll.id); }}
-                                        className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : 'text-secondary hover:text-red-500 hover:bg-red-500/10'}`}
-                                        title={confirmDeleteId === poll.id ? "Nhấn lần nữa để xóa" : "Xóa kèo"}
-                                    >
-                                        <Trash2 size={18} />
-                                        {confirmDeleteId === poll.id && <span className="text-xs font-bold pr-1">?</span>}
+                                        {confirmDeleteId === poll.id ? <span className="text-xs font-bold">Xác nhận xóa?</span> : <Trash2 size={16}/>}
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Finalize UI for Everyone (Admin Override) */}
-                            <div className={`border-t border-border pt-3 ${finalizingPollId === poll.id ? 'block' : ''}`}>
-                                {finalizingPollId === poll.id ? (
-                                    <div className="animate-in slide-in-from-top-2">
-                                        <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-                                            <Gavel size={14} className="text-yellow-500"/> Chốt kết quả cuối cùng
-                                        </h4>
-                                        
-                                        <div className="grid grid-cols-2 gap-4 mb-3">
-                                            <div>
-                                                <label className="text-[10px] uppercase font-bold text-secondary block mb-1">Ngày (Top Votes)</label>
-                                                <select 
-                                                    value={selectedFinalTime}
-                                                    onChange={e => setSelectedFinalTime(e.target.value)}
-                                                    className="w-full bg-background border border-border rounded p-2 text-sm text-white"
-                                                >
-                                                    <option value="">-- Chọn ngày --</option>
-                                                    {topTimes.map(t => (
-                                                        <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} votes)</option>
-                                                    ))}
-                                                    {topTimes.length === 0 && (poll.timeOptions || []).map(t => (
-                                                        <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} votes)</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] uppercase font-bold text-secondary block mb-1">Địa điểm (Top Votes)</label>
-                                                <select 
-                                                    value={selectedFinalLoc}
-                                                    onChange={e => setSelectedFinalLoc(e.target.value)}
-                                                    className="w-full bg-background border border-border rounded p-2 text-sm text-white"
-                                                >
-                                                    <option value="">-- Chọn quán --</option>
-                                                    {topLocs.map(t => (
-                                                        <option key={t.id} value={t.id}>{t.text} ({t.votes.length} votes)</option>
-                                                    ))}
-                                                    {topLocs.length === 0 && poll.options.map(t => (
-                                                        <option key={t.id} value={t.id}>{t.text} ({t.votes.length} votes)</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-2 justify-end">
-                                            <button onClick={() => setFinalizingPollId(null)} className="text-xs px-3 py-1.5 rounded bg-surface border border-border text-secondary hover:text-white">Hủy</button>
-                                            <button onClick={() => submitFinalize(poll.id)} className="text-xs px-3 py-1.5 rounded bg-yellow-500 hover:bg-yellow-600 text-black font-bold">Lưu Chốt Kèo</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button 
-                                        onClick={() => handleFinalizeClick(poll)}
-                                        className={`w-full py-2 rounded border border-dashed flex items-center justify-center gap-2 text-sm font-bold transition-all ${poll.finalizedOptionId ? 'border-green-500/30 text-green-500 bg-green-500/5' : 'border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10'}`}
-                                    >
-                                        {poll.finalizedOptionId ? <Check size={16}/> : <Gavel size={16}/>}
-                                        {poll.finalizedOptionId ? 'Đã chốt kèo (Sửa)' : 'Chốt kèo này ngay'}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )})}
+                        )
+                    })}
                 </div>
             </div>
         )}
