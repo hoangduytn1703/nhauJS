@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthService } from '../services/mockService';
 import { useAuth } from '../App';
@@ -17,7 +17,7 @@ const Login: React.FC = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [sendingReset, setSendingReset] = useState(false);
   
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,6 +34,12 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useLayoutEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user])
 
   const handleForgotPassword = async (e: React.FormEvent) => {
       e.preventDefault();

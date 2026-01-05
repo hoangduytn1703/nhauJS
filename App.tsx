@@ -20,7 +20,17 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>(null!);
+const localAuth = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user')
+
+let authContext: AuthContextType | null = null;
+
+try {
+    authContext = JSON.parse(localAuth!);
+} catch (e) {
+    console.error("Failed to parse local auth", e);
+}
+
+const AuthContext = createContext<AuthContextType>(authContext);
 
 export const useAuth = () => useContext(AuthContext);
 
