@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
 import { User, Poll } from '../types';
-import { Crown, Beer, Eye, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { Crown, Beer, Eye, CheckCircle, DollarSign, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../App';
 import { UserDetailModal } from '../components/UserDetailModal';
 
@@ -25,15 +25,17 @@ const Leaderboard: React.FC = () => {
 
   // Calculate scores
   const userStats = users.map(u => {
-      // 1. Attendance Count
-      const attendanceCount = polls.filter(p => p.confirmedAttendances?.includes(u.id)).length;
+      // 1. Attendance Count (Admin Confirmed + Manual Offset)
+      const realAttendance = polls.filter(p => p.confirmedAttendances?.includes(u.id)).length;
+      const totalAttendance = Math.max(0, realAttendance + (u.attendanceOffset || 0));
       
-      // 2. Vote Count
-      const voteCount = polls.filter(p => {
+      // 2. Vote Count (Calculated + Manual Offset)
+      const realVoteCount = polls.filter(p => {
           const hasVotedTime = (p.timeOptions || []).some(opt => opt.votes.includes(u.id));
           const hasVotedLoc = p.options.some(opt => opt.votes.includes(u.id));
           return hasVotedTime && hasVotedLoc;
       }).length;
+      const totalVoteCount = Math.max(0, realVoteCount + (u.voteOffset || 0));
 
       // 3. Total Money Spent
       const totalMoney = polls.reduce((sum, poll) => {
@@ -44,17 +46,29 @@ const Leaderboard: React.FC = () => {
           return sum;
       }, 0);
 
+      // 4. Flake Penalty Calculation
+      // "mỗi lần bùng bằng 0.5 lần tham gia" -> Deduct 0.5 from attendance score for ranking
+      // flakeCount is directly editable by Admin and auto-updated by logic
+      const flakes = Math.max(0, u.flakeCount || 0);
+      
+      // Effective Score for Ranking
+      const effectiveAttendanceScore = totalAttendance - (flakes * 0.5);
+
       return {
           ...u,
-          attendance: attendanceCount,
-          voteScore: voteCount,
-          totalMoney: totalMoney
+          attendance: totalAttendance,
+          flakeCount: flakes,
+          voteScore: totalVoteCount,
+          totalMoney: totalMoney,
+          effectiveAttendanceScore
       };
   }).sort((a, b) => {
-      // Priority 1: Money
+      // Priority 1: Money (Đại Gia Leaderboard)
       if (b.totalMoney !== a.totalMoney) return b.totalMoney - a.totalMoney;
-      // Priority 2: Attendance
-      if (b.attendance !== a.attendance) return b.attendance - a.attendance;
+      
+      // Priority 2: Reliability (Effective Attendance)
+      if (b.effectiveAttendanceScore !== a.effectiveAttendanceScore) return b.effectiveAttendanceScore - a.effectiveAttendanceScore;
+      
       // Priority 3: Vote Count
       return b.voteScore - a.voteScore; 
   });
@@ -65,7 +79,7 @@ const Leaderboard: React.FC = () => {
       if (index > 0) {
           const prev = userStats[index - 1];
           // If scores are different, update rank to current position (index + 1)
-          if (u.totalMoney !== prev.totalMoney || u.attendance !== prev.attendance || u.voteScore !== prev.voteScore) {
+          if (u.totalMoney !== prev.totalMoney || u.effectiveAttendanceScore !== prev.effectiveAttendanceScore || u.voteScore !== prev.voteScore) {
               currentRank = index + 1;
           }
       }
@@ -114,9 +128,10 @@ const Leaderboard: React.FC = () => {
                             <DollarSign size={20} />
                             <span className="font-black text-lg">{u.totalMoney.toLocaleString()}k</span>
                         </div>
-                        <div className="flex justify-between w-full text-xs text-secondary px-4">
-                             <div className="flex items-center gap-1"><Beer size={12}/> {u.attendance} kèo</div>
-                             <div className="flex items-center gap-1"><CheckCircle size={12}/> {u.voteScore} vote</div>
+                        <div className="flex justify-between w-full text-xs text-secondary px-2">
+                             <div className="flex items-center gap-1"><Beer size={12}/> {u.attendance}</div>
+                             <div className="flex items-center gap-1 text-red-400"><AlertTriangle size={12}/> {u.flakeCount}</div>
+                             <div className="flex items-center gap-1"><CheckCircle size={12}/> {u.voteScore}</div>
                         </div>
                     </div>
                 </div>
@@ -132,7 +147,7 @@ const Leaderboard: React.FC = () => {
                         <th className="px-6 py-4">Dân chơi</th>
                         <th className="px-6 py-4 text-center">Đã chi (k)</th>
                         <th className="px-6 py-4 text-center">Tham gia</th>
-                        <th className="px-6 py-4 text-center">Vote</th>
+                        <th className="px-6 py-4 text-center text-red-400">Vết nhơ</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -155,12 +170,22 @@ const Leaderboard: React.FC = () => {
                                 <span className="text-secondary">{u.attendance}</span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                                <span className="text-secondary text-xs">{u.voteScore}</span>
+                                {(u.flakeCount || 0) > 0 ? (
+                                    <span className="text-red-400 font-bold bg-red-900/10 px-2 py-1 rounded">{u.flakeCount}</span>
+                                ) : (
+                                    <span className="text-secondary opacity-30">-</span>
+                                )}
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+        </div>
+        
+        <div className="text-center text-xs text-secondary italic mt-4 max-w-lg mx-auto bg-surface/50 p-3 rounded-lg border border-border">
+            * Logic xếp hạng: Tổng tiền đã chi (Ưu tiên 1) <br/>
+            → Điểm chuyên cần (Tham gia - 0.5 x Vết nhơ) (Ưu tiên 2) <br/>
+            → Số lần Vote đầy đủ (Ưu tiên 3)
         </div>
     </div>
   );

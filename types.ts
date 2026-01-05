@@ -1,3 +1,4 @@
+
 export enum UserRole {
   MEMBER = 'MEMBER',
   ADMIN = 'ADMIN'
@@ -12,7 +13,15 @@ export interface User {
   role: UserRole;
   quote: string;
   favoriteDrinks: string[];
-  isBanned?: boolean; // New flag for banning
+  isBanned?: boolean; 
+  
+  // Stats & Logic
+  flakeCount?: number; // Tổng số vết nhơ (Display)
+  flakedPolls?: string[]; // Danh sách ID các kèo đã bùng (để tránh tính 2 lần 1 kèo)
+  
+  // Manual Adjustments (Admin overrides)
+  attendanceOffset?: number; // Cộng/Trừ số lần tham gia
+  voteOffset?: number; // Cộng/Trừ số lần vote
 }
 
 export interface PollOption {

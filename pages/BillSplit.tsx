@@ -121,7 +121,7 @@ const BillSplit: React.FC = () => {
         if (!selectedPollId || !isAdmin) return;
         setSaving(true);
         try {
-            const total = Object.values(userItems).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
+            const total = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
             await DataService.updateBill(selectedPollId, {
                 imageUrl: billImage,
                 items: userItems,
@@ -136,7 +136,7 @@ const BillSplit: React.FC = () => {
     };
 
     // Calculate Total for display
-    const grandTotal = Object.values(userItems).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
+    const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
 
     // Calculate User's specific amount for QR code
     const currentUserItem = user && userItems[user.id];
@@ -328,7 +328,7 @@ const BillSplit: React.FC = () => {
                                  </tr>
                              </thead>
                              <tbody className="divide-y divide-border">
-                                 {Object.values(userItems).map(item => {
+                                 {(Object.values(userItems) as BillItem[]).map(item => {
                                      const displayUser = getDisplayUser(item.userId);
                                      const isGhost = !users[item.userId];
                                      return (

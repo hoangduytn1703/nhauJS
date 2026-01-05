@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/mockService';
 import { User, Poll, PollOption } from '../types';
 import { useAuth } from '../App';
-import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
 
 // Helper to format date for input type="date"
@@ -19,6 +19,7 @@ const Admin: React.FC = () => {
 
   // Modal State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editingUserStats, setEditingUserStats] = useState<User | null>(null);
 
   // Form State
   const [editingPollId, setEditingPollId] = useState<string | null>(null);
@@ -51,6 +52,13 @@ const Admin: React.FC = () => {
   const [selectedFinalTime, setSelectedFinalTime] = useState<string>('');
   const [selectedFinalLoc, setSelectedFinalLoc] = useState<string>('');
 
+  // User Stats Edit State
+  const [statsForm, setStatsForm] = useState({
+      attendanceOffset: 0,
+      voteOffset: 0,
+      flakeCount: 0
+  });
+
   useEffect(() => {
     refreshData();
   }, []);
@@ -60,7 +68,33 @@ const Admin: React.FC = () => {
     DataService.getPolls().then(setPolls);
   }
 
-  // Populate form when clicking Edit
+  // --- STATS EDITING ---
+  const handleEditStatsClick = (u: User) => {
+      setEditingUserStats(u);
+      setStatsForm({
+          attendanceOffset: u.attendanceOffset || 0,
+          voteOffset: u.voteOffset || 0,
+          flakeCount: u.flakeCount || 0
+      });
+  };
+
+  const submitUserStats = async () => {
+      if (!editingUserStats) return;
+      try {
+          await DataService.updateProfile(editingUserStats.id, {
+              attendanceOffset: Number(statsForm.attendanceOffset),
+              voteOffset: Number(statsForm.voteOffset),
+              flakeCount: Number(statsForm.flakeCount)
+          });
+          alert("Đã cập nhật chỉ số!");
+          setEditingUserStats(null);
+          refreshData();
+      } catch (e) {
+          alert("Lỗi khi cập nhật");
+      }
+  };
+
+  // Populate form when clicking Edit Poll
   const handleEditClick = (poll: Poll) => {
       setEditingPollId(poll.id);
       setPollTitle(poll.title);
@@ -223,8 +257,6 @@ const Admin: React.FC = () => {
               await DataService.deleteUser(targetUserId);
               setUsers(prev => prev.filter(u => u.id !== targetUserId));
               setConfirmDeleteId(null);
-              // Note: Vote history remains because we only deleted the User document,
-              // poll.votes still contains the ID. UI handles missing user gracefully.
           } catch (e) {
               alert("Lỗi khi xóa user");
           } finally {
@@ -262,7 +294,6 @@ const Admin: React.FC = () => {
           setSelectedFinalLoc('');
       } else {
           setFinalizingPollId(poll.id);
-          // Pre-select if already finalized or select the first top winner
           const topTimes = getWinners(poll.timeOptions || []);
           const topLocs = getWinners(poll.options);
           
@@ -327,6 +358,63 @@ const Admin: React.FC = () => {
             currentUserRole={user?.role}
             onToggleAttendance={handleToggleAttendance}
         />
+
+        {/* --- EDIT STATS MODAL --- */}
+        {editingUserStats && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                    <button 
+                        onClick={() => setEditingUserStats(null)}
+                        className="absolute top-4 right-4 text-secondary hover:text-white"
+                    >
+                        <XCircle size={24} />
+                    </button>
+                    
+                    <h3 className="text-xl font-bold text-white mb-2">Chỉnh sửa chỉ số</h3>
+                    <p className="text-secondary text-sm mb-4">Cập nhật thủ công cho: <strong className="text-primary">{editingUserStats.nickname}</strong></p>
+                    
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <label className="text-xs uppercase font-bold text-secondary mb-1 block">Điều chỉnh số lần tham gia (+/-)</label>
+                            <input 
+                                type="number" 
+                                value={statsForm.attendanceOffset}
+                                onChange={e => setStatsForm({...statsForm, attendanceOffset: Number(e.target.value)})}
+                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-primary outline-none"
+                            />
+                            <p className="text-[10px] text-secondary mt-1">Dùng số âm để giảm.</p>
+                        </div>
+                        <div>
+                            <label className="text-xs uppercase font-bold text-secondary mb-1 block">Điều chỉnh số lần vote (+/-)</label>
+                            <input 
+                                type="number" 
+                                value={statsForm.voteOffset}
+                                onChange={e => setStatsForm({...statsForm, voteOffset: Number(e.target.value)})}
+                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-primary outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs uppercase font-bold text-secondary mb-1 block flex items-center gap-1"><AlertTriangle size={12}/> Số "Vết Nhơ" (Giá trị thực)</label>
+                            <input 
+                                type="number" 
+                                min="0"
+                                value={statsForm.flakeCount}
+                                onChange={e => setStatsForm({...statsForm, flakeCount: Number(e.target.value)})}
+                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-red-500 outline-none"
+                            />
+                            <p className="text-[10px] text-secondary mt-1">Nhập tổng số lần bùng kèo.</p>
+                        </div>
+
+                        <button 
+                            onClick={submitUserStats}
+                            className="bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl mt-2 flex items-center justify-center gap-2"
+                        >
+                            <Save size={18}/> Lưu Thay Đổi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
@@ -395,6 +483,14 @@ const Admin: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                                            <button 
+                                                onClick={() => handleEditStatsClick(u)}
+                                                className="p-2 rounded-lg transition-all bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                                                title="Chỉnh sửa chỉ số"
+                                            >
+                                                <Settings size={16}/>
+                                            </button>
+
                                             <button 
                                                 onClick={() => handleToggleBan(u)}
                                                 disabled={processingUserId === u.id || u.role === 'ADMIN'}

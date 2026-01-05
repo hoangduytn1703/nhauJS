@@ -1,7 +1,6 @@
 import React from 'react';
 import { User, Poll, UserRole } from '../types';
-import { X, Calendar, CheckCircle, XCircle, Trophy } from 'lucide-react';
-import { DataService } from '../services/mockService';
+import { X, Calendar, CheckCircle, XCircle, Trophy, AlertTriangle } from 'lucide-react';
 
 interface UserDetailModalProps {
     user: User | null;
@@ -43,6 +42,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     }).filter(item => item.isJoined || item.isAttended); // Only show relevant polls
 
     const totalAttended = allPolls.filter(p => p.confirmedAttendances?.includes(user.id)).length;
+    const flakeCount = user.flakeCount || 0;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
@@ -54,10 +54,15 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                         <div>
                             <h2 className="text-2xl font-black text-white">{user.nickname}</h2>
                             <p className="text-secondary text-sm">{user.name} • {user.email}</p>
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex flex-wrap gap-2 mt-2">
                                 <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-xs font-bold border border-primary/30 flex items-center gap-1">
                                     <Trophy size={12}/> {totalAttended} Lần tham gia
                                 </span>
+                                {flakeCount > 0 && (
+                                    <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-bold border border-red-500/30 flex items-center gap-1">
+                                        <AlertTriangle size={12}/> {flakeCount} Vết nhơ
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -99,31 +104,34 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {item.isVotedFull ? (
-                                                    <span className="inline-flex items-center gap-1 text-green-400 bg-green-400/10 px-2 py-1 rounded text-xs font-bold border border-green-400/20">
-                                                        <CheckCircle size={12}/> Đủ
+                                                    <span className="inline-flex items-center gap-1 text-xs text-green-400 font-bold">
+                                                        <CheckCircle size={12} /> Full Option
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1 text-orange-400 bg-orange-400/10 px-2 py-1 rounded text-xs font-bold border border-orange-400/20">
-                                                        <XCircle size={12}/> Thiếu
+                                                    <span className="inline-flex items-center gap-1 text-xs text-secondary">
+                                                        Chưa vote đủ
                                                     </span>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {currentUserRole === UserRole.ADMIN ? (
-                                                    <label className="inline-flex items-center cursor-pointer relative">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={item.isAttended} 
-                                                            onChange={() => onToggleAttendance && onToggleAttendance(item.poll.id, user.id)}
-                                                            className="sr-only peer"
-                                                        />
-                                                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                                                    </label>
+                                                    <button 
+                                                        onClick={() => onToggleAttendance && onToggleAttendance(item.poll.id, user.id)}
+                                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                                                            item.isAttended 
+                                                            ? 'bg-green-500/20 text-green-500 border-green-500/30 hover:bg-green-500/30' 
+                                                            : 'bg-surface text-secondary border-border hover:border-primary hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {item.isAttended ? 'Đã Check-in' : 'Chưa Check-in'}
+                                                    </button>
                                                 ) : (
                                                     item.isAttended ? (
-                                                        <CheckCircle className="mx-auto text-primary" size={20} />
+                                                        <span className="text-green-500 font-bold flex items-center justify-center gap-1">
+                                                            <CheckCircle size={14}/> Có mặt
+                                                        </span>
                                                     ) : (
-                                                        <span className="text-xs text-secondary">-</span>
+                                                        <span className="text-secondary opacity-50">-</span>
                                                     )
                                                 )}
                                             </td>

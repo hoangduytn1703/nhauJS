@@ -20,7 +20,9 @@ import {
   runTransaction,
   query,
   orderBy,
-  arrayUnion
+  arrayUnion,
+  arrayRemove,
+  increment
 } from 'firebase/firestore';
 
 export const AuthService = {
@@ -49,7 +51,11 @@ export const AuthService = {
             role: UserRole.MEMBER,
             quote: 'Chưa say chưa về',
             favoriteDrinks: [],
-            isBanned: false
+            isBanned: false,
+            flakeCount: 0,
+            flakedPolls: [],
+            attendanceOffset: 0,
+            voteOffset: 0
         };
         await setDoc(doc(db, "users", uid), newUser);
         return newUser;
@@ -75,7 +81,11 @@ export const AuthService = {
         role: UserRole.MEMBER,
         quote: 'Chưa say chưa về',
         favoriteDrinks: [],
-        isBanned: false
+        isBanned: false,
+        flakeCount: 0,
+        flakedPolls: [],
+        attendanceOffset: 0,
+        voteOffset: 0
       };
 
       await setDoc(doc(db, "users", uid), newUser);
@@ -131,9 +141,6 @@ export const DataService = {
 
   // Admin: Permanently Delete User
   deleteUser: async (userId: string): Promise<void> => {
-      // We only delete the Firestore document.
-      // We CANNOT delete the Auth User easily from client SDK without Admin SDK.
-      // But deleting the firestore doc effectively removes them from the app logic.
       await deleteDoc(doc(db, "users", userId));
   },
 
@@ -196,7 +203,6 @@ export const DataService = {
       });
   },
   
-  // User adds new option (Location or Time)
   addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string }, userId: string): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
       
@@ -211,23 +217,48 @@ export const DataService = {
       await updateDoc(pollRef, {
           [type]: arrayUnion(newOption)
       });
+      
+      // Auto vote logic also needs to trigger redemption check? 
+      // Simplified: Add option doesn't usually remove flake automatically, explicit vote does.
   },
 
-  // Save bill information
   updateBill: async (pollId: string, bill: BillInfo): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
       await updateDoc(pollRef, { bill });
   },
 
-  // Logic Join/Decline: Clear votes if decline
+  // --- LOGIC BÙNG KÈO & REDEMPTION (Participation) ---
   submitParticipation: async (pollId: string, userId: string, status: 'JOIN' | 'DECLINE', reason?: string): Promise<void> => {
     const pollRef = doc(db, "polls", pollId);
+    const userRef = doc(db, "users", userId);
     
     await runTransaction(db, async (transaction) => {
         const pollDoc = await transaction.get(pollRef);
-        if (!pollDoc.exists()) throw "Poll not found";
+        const userDoc = await transaction.get(userRef);
+        if (!pollDoc.exists() || !userDoc.exists()) throw "Not found";
         
         const pollData = pollDoc.data() as Poll;
+        const userData = userDoc.data() as User;
+        
+        const currentParticipant = pollData.participants?.[userId];
+        const currentStatus = currentParticipant?.status;
+
+        // 1. Logic: Nếu JOIN -> DECLINE (Bùng kèo)
+        if (currentStatus === 'JOIN' && status === 'DECLINE') {
+            // Check idempotency: Chỉ tính 1 lần vết nhơ cho mỗi poll
+            const flakedPolls = userData.flakedPolls || [];
+            if (!flakedPolls.includes(pollId)) {
+                transaction.update(userRef, { 
+                    flakeCount: increment(1),
+                    flakedPolls: arrayUnion(pollId)
+                });
+            }
+        }
+        
+        // Note: Nếu DECLINE -> JOIN: Chưa xóa vết nhơ ngay.
+        // Quy tắc: "vote ngày và quán đầy đủ thỉ... xóa đi vết nhơ".
+        // Việc này sẽ được check trong hàm `vote`.
+
         const participantData: ParticipantData = {
             status,
             reason: reason || '',
@@ -258,20 +289,23 @@ export const DataService = {
     });
   },
 
-  // Unified vote function for Location ('options') or Time ('timeOptions')
+  // --- LOGIC VOTE & REDEMPTION (Xóa vết nhơ) ---
   vote: async (pollId: string, optionId: string, userId: string, target: 'options' | 'timeOptions'): Promise<void> => {
     const pollRef = doc(db, "polls", pollId);
+    const userRef = doc(db, "users", userId);
 
     await runTransaction(db, async (transaction) => {
       const pollDoc = await transaction.get(pollRef);
-      if (!pollDoc.exists()) {
-        throw "Poll does not exist!";
-      }
+      const userDoc = await transaction.get(userRef);
+      if (!pollDoc.exists()) throw "Poll does not exist!";
+      if (!userDoc.exists()) throw "User does not exist!";
 
       const pollData = pollDoc.data() as Poll;
+      const userData = userDoc.data() as User;
       
       // Check Deadline
-      if (pollData.deadline && Date.now() > pollData.deadline) {
+      const isDeadlinePassed = pollData.deadline && Date.now() > pollData.deadline;
+      if (isDeadlinePassed) {
           throw new Error("Đã hết thời gian bình chọn!");
       }
 
@@ -281,11 +315,11 @@ export const DataService = {
           throw new Error("Bạn phải xác nhận tham gia trước khi vote!");
       }
 
+      // --- 1. Apply Vote Logic ---
       const options = target === 'options' ? pollData.options : (pollData.timeOptions || []);
       let newOptions: PollOption[] = [];
 
-      // Logic: Allow multiple votes for both Time and Location (as requested "Time options also multiple")
-      // If user clicks again -> toggle off
+      // Toggle vote
       newOptions = options.map(opt => {
         if (opt.id === optionId) {
             const hasVoted = opt.votes.includes(userId);
@@ -300,11 +334,43 @@ export const DataService = {
         return opt;
       });
 
-      transaction.update(pollRef, { [target]: newOptions });
+      // Prepare update payload for Poll
+      const updatePayload: any = { [target]: newOptions };
+      transaction.update(pollRef, updatePayload);
+
+
+      // --- 2. Check Redemption (Xóa vết nhơ) ---
+      // Requirement: User previously flaked THIS poll + Now Status JOIN + Voted Full (Time + Loc) + Within Deadline.
+      const flakedPolls = userData.flakedPolls || [];
+      const hasFlakedThisPoll = flakedPolls.includes(pollId);
+
+      if (hasFlakedThisPoll && !isDeadlinePassed) {
+          // Determine existing votes (Current DB state)
+          // Note: `newOptions` contains the updated state for the `target` array.
+          // We need to check the state of the OTHER array from `pollData`.
+          
+          let hasVotedLoc = false;
+          let hasVotedTime = false;
+
+          if (target === 'options') {
+              hasVotedLoc = newOptions.some(o => o.votes.includes(userId)); // Check updated Locs
+              hasVotedTime = (pollData.timeOptions || []).some(t => t.votes.includes(userId)); // Check existing Times
+          } else {
+              hasVotedLoc = pollData.options.some(o => o.votes.includes(userId)); // Check existing Locs
+              hasVotedTime = newOptions.some(t => t.votes.includes(userId)); // Check updated Times
+          }
+
+          // If Full Vote -> Redemption!
+          if (hasVotedLoc && hasVotedTime) {
+               transaction.update(userRef, {
+                   flakeCount: increment(-1), // Decrease stain
+                   flakedPolls: arrayRemove(pollId) // Remove from tracking to prevent double-decrement
+               });
+          }
+      }
     });
   },
 
-  // Admin toggles attendance
   toggleAttendance: async (pollId: string, userId: string): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
       await runTransaction(db, async (transaction) => {

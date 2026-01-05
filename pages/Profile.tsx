@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { DataService } from '../services/mockService';
 import { User, UserRole } from '../types';
-import { Badge, Edit, Save, Camera } from 'lucide-react';
+import { Badge, Edit, Save, Camera, AlertTriangle } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -13,6 +13,16 @@ const Profile: React.FC = () => {
   if (!user) return null;
 
   const handleSave = async () => {
+      // 1. Validation Logic
+      if (!formData.nickname?.trim()) {
+          alert('Vui lòng nhập "Biệt danh trên bàn nhậu"!');
+          return;
+      }
+      if (!formData.name?.trim()) {
+          alert('Vui lòng nhập "Tên thật"!');
+          return;
+      }
+
       setSaving(true);
       try {
           const updated = await DataService.updateProfile(user.id, formData);
@@ -71,7 +81,21 @@ const Profile: React.FC = () => {
       reader.readAsDataURL(file);
   };
 
-  const drinkOptions = ['Bia hơi', 'Rượu đế', 'Rượu vang', 'Soju', 'Whisky', 'Cocktail'];
+  // 2. Updated Drink List (Beers only)
+  const drinkOptions = [
+      'Tiger Bạc (Crystal)', 
+      'Tiger Nâu', 
+      'Heineken', 
+      'Heineken Bạc',
+      'Budweiser', 
+      'Bia Sài Gòn', 
+      'Bia 333',
+      'Sapporo', 
+      'Beck\'s',
+      'Bia Trúc Bạch',
+      'Bia Hơi Hà Nội',
+      'Strongbow'
+  ];
 
   const toggleDrink = (drink: string) => {
       const current = formData.favoriteDrinks || [];
@@ -121,19 +145,23 @@ const Profile: React.FC = () => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                     <label className="flex flex-col gap-2">
-                        <span className="text-white font-medium">Biệt danh trên bàn nhậu</span>
+                        <span className="text-white font-medium flex items-center gap-1">Biệt danh bàn nhậu <span className="text-red-500">*</span></span>
                         <input 
                             value={formData.nickname}
                             onChange={(e) => setFormData({...formData, nickname: e.target.value})}
-                            className="w-full bg-surface border border-border rounded-xl px-4 h-12 text-white focus:border-primary outline-none" 
+                            className={`w-full bg-surface border rounded-xl px-4 h-12 text-white focus:border-primary outline-none ${!formData.nickname?.trim() ? 'border-red-500/50' : 'border-border'}`}
+                            placeholder="VD: Tuấn Cồn"
+                            required
                         />
                     </label>
                     <label className="flex flex-col gap-2">
-                        <span className="text-white font-medium">Tên thật</span>
+                        <span className="text-white font-medium flex items-center gap-1">Tên thật <span className="text-red-500">*</span></span>
                         <input 
                             value={formData.name}
                             onChange={(e) => setFormData({...formData, name: e.target.value})}
-                            className="w-full bg-surface border border-border rounded-xl px-4 h-12 text-white focus:border-primary outline-none" 
+                            className={`w-full bg-surface border rounded-xl px-4 h-12 text-white focus:border-primary outline-none ${!formData.name?.trim() ? 'border-red-500/50' : 'border-border'}`}
+                            placeholder="Tên đầy đủ"
+                            required
                         />
                     </label>
                 </div>
@@ -149,13 +177,13 @@ const Profile: React.FC = () => {
 
                 {/* Tags */}
                 <div>
-                    <span className="text-white font-medium mb-3 block">Món tủ</span>
+                    <span className="text-white font-medium mb-3 block">Món tủ (Bia)</span>
                     <div className="flex flex-wrap gap-3">
                         {drinkOptions.map(drink => (
                             <button
                                 key={drink}
                                 onClick={() => toggleDrink(drink)}
-                                className={`px-5 py-2 rounded-full border transition-all ${
+                                className={`px-5 py-2 rounded-full border transition-all text-sm ${
                                     formData.favoriteDrinks?.includes(drink)
                                     ? 'bg-primary text-background font-bold border-primary'
                                     : 'bg-surface text-secondary border-border hover:border-primary'
@@ -198,16 +226,21 @@ const Profile: React.FC = () => {
                             <div className="flex gap-4 items-end">
                                 <img src={formData.avatar || user.avatar} className="w-20 h-20 rounded-full border-2 border-secondary object-cover" />
                                 <div>
-                                    <h2 className="text-white text-2xl font-black leading-none mb-1">{formData.nickname}</h2>
-                                    <p className="text-secondary text-xs font-medium uppercase">{formData.name}</p>
+                                    <h2 className="text-white text-2xl font-black leading-none mb-1">{formData.nickname || '...'}</h2>
+                                    <p className="text-secondary text-xs font-medium uppercase">{formData.name || '...'}</p>
+                                    {(user.flakeCount || 0) > 0 && (
+                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded w-fit border border-red-900/30">
+                                            <AlertTriangle size={10} /> {user.flakeCount} Vết nhơ
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="pt-4 border-t border-white/10 mt-2">
                                 <p className="text-white/90 text-xs italic">"{formData.quote || '...'}"</p>
                                 <div className="flex justify-between items-center mt-3">
-                                    <div className="flex gap-1 text-[10px] text-secondary uppercase font-bold">
-                                        {formData.favoriteDrinks?.slice(0, 3).join(' • ')}
+                                    <div className="flex gap-1 text-[10px] text-secondary uppercase font-bold max-w-[70%] line-clamp-1">
+                                        {formData.favoriteDrinks?.length ? formData.favoriteDrinks.join(' • ') : 'Chưa chọn món tủ'}
                                     </div>
                                     <div className="text-[10px] text-white/50 font-mono">ID: {user.id.toUpperCase().slice(0, 8)}</div>
                                 </div>
