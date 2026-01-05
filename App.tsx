@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (user: User, remember: boolean) => void;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
+  loading: boolean;
 }
 
 const localAuth = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user')
@@ -35,6 +36,7 @@ export const useAuth = () => useContext(AuthContext);
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const login = (userData: User, remember: boolean) => {
     setUser(userData);
@@ -57,7 +59,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (user) {
       const updated = { ...user, ...data };
       setUser(updated);
-      // Update whichever storage is active
+      // Update active storage
       if (localStorage.getItem('nhau_user')) {
           localStorage.setItem('nhau_user', JSON.stringify(updated));
       } else {
@@ -69,16 +71,16 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   // Check login status & Sync with DB
   useEffect(() => {
     const initAuth = async () => {
-        // Prioritize localStorage, fall back to sessionStorage
-        const stored = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user');
-        
-        if (stored) {
-            const localUser = JSON.parse(stored);
-            // 1. Optimistic load from local storage
-            setUser(localUser);
+        try {
+            // Prioritize localStorage, fall back to sessionStorage
+            const stored = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user');
+            
+            if (stored) {
+                const localUser = JSON.parse(stored);
+                // 1. Optimistic load from local storage
+                setUser(localUser);
 
-            // 2. Fetch fresh data from Firestore to ensure Role/Avatar is up-to-date
-            try {
+                // 2. Fetch fresh data from Firestore to ensure Role/Avatar is up-to-date
                 const freshUser = await DataService.getUser(localUser.id);
                 if (freshUser) {
                     setUser(freshUser);
@@ -89,17 +91,18 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         sessionStorage.setItem('nhau_user', JSON.stringify(freshUser));
                     }
                 }
-            } catch (e) {
-                console.error("Failed to sync user profile", e);
-                // If user deleted in DB or error, optional: logout();
             }
+        } catch (e) {
+            console.error("Failed to sync user profile", e);
+        } finally {
+            setLoading(false); // Done loading regardless of result
         }
     };
     initAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -107,13 +110,25 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 // --- Route Guard ---
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-background text-primary">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+      );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+
   if (!user || user.role !== UserRole.ADMIN) return <Navigate to="/" replace />;
   return <>{children}</>;
 };

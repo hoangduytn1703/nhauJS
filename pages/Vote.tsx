@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
 import { Poll, User, PollOption } from '../types';
 import { useAuth } from '../App';
-import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus } from 'lucide-react';
+import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Vote: React.FC = () => {
@@ -26,6 +26,9 @@ const Vote: React.FC = () => {
   const [newOptionText, setNewOptionText] = useState('');
   const [newOptionDesc, setNewOptionDesc] = useState('');
   const [adding, setAdding] = useState(false);
+
+  // View Voters Modal State
+  const [viewVotersModal, setViewVotersModal] = useState<{show: boolean, title: string, voterIds: string[]}>({show: false, title: '', voterIds: []});
 
   const fetchData = async () => {
      try {
@@ -119,6 +122,11 @@ const Vote: React.FC = () => {
       } finally {
           setAdding(false);
       }
+  };
+
+  // --- View Voters Logic ---
+  const openVotersModal = (title: string, voterIds: string[]) => {
+      setViewVotersModal({ show: true, title, voterIds });
   };
 
   // Calculate Time Remaining for the first active poll
@@ -451,10 +459,12 @@ const Vote: React.FC = () => {
                                                     Tháng {dateInfo.month}
                                                 </div>
 
-                                                <div className="mt-3 w-full border-t border-white/10 pt-2 flex flex-col items-center gap-2">
-                                                     <div className={`text-xs font-bold ${isWinner ? 'text-yellow-400' : ''}`}>{voteCount} phiếu</div>
+                                                <div className="mt-3 w-full border-t border-white/10 pt-2 flex flex-col items-center gap-2"
+                                                    onClick={(e) => { e.stopPropagation(); openVotersModal(timeOpt.text, timeOpt.votes); }}
+                                                >
+                                                     <div className={`text-xs font-bold hover:underline cursor-pointer ${isWinner ? 'text-yellow-400' : ''}`}>{voteCount} phiếu</div>
                                                      {/* Mini avatars for time */}
-                                                     <div className="flex justify-center -space-x-1 h-6">
+                                                     <div className="flex justify-center -space-x-1 h-6 cursor-pointer">
                                                         {timeOpt.votes.slice(0, 3).map(uid => {
                                                             const voter = getVoterInfo(uid);
                                                             return (
@@ -466,7 +476,11 @@ const Vote: React.FC = () => {
                                                                 />
                                                             )
                                                         })}
-                                                        {voteCount > 3 && <div className="w-5 h-5 rounded-full bg-surface border border-border text-[8px] flex items-center justify-center">+{voteCount-3}</div>}
+                                                        {voteCount > 3 && (
+                                                            <div className="w-5 h-5 rounded-full bg-surface border border-border text-[8px] flex items-center justify-center hover:bg-white/10">
+                                                                +{voteCount-3}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -546,7 +560,7 @@ const Vote: React.FC = () => {
                                               </div>
 
                                               <div className="mt-auto pt-4 border-t border-border">
-                                                  <div className="flex justify-between items-end mb-2">
+                                                  <div className="flex justify-between items-end mb-2 cursor-pointer" onClick={() => openVotersModal(option.text, option.votes)}>
                                                       <div className="flex -space-x-2">
                                                           {/* Display Voter Avatars */}
                                                           {option.votes.slice(0, 4).map((uid) => {
@@ -562,13 +576,13 @@ const Vote: React.FC = () => {
                                                               );
                                                           })}
                                                           {option.votes.length > 4 && (
-                                                              <div className="w-8 h-8 rounded-full bg-surface border-2 border-border flex items-center justify-center text-[10px] text-secondary font-bold">
+                                                              <div className="w-8 h-8 rounded-full bg-surface border-2 border-border flex items-center justify-center text-[10px] text-secondary font-bold hover:bg-white/10 hover:text-white transition-colors">
                                                                   +{option.votes.length - 4}
                                                               </div>
                                                           )}
                                                           {option.votes.length === 0 && <span className="text-xs text-secondary">Chưa có ai</span>}
                                                       </div>
-                                                      <span className={`font-bold text-sm ${isWinner ? 'text-yellow-400' : 'text-primary'}`}>{option.votes.length} phiếu</span>
+                                                      <span className={`font-bold text-sm ${isWinner ? 'text-yellow-400' : 'text-primary'} hover:underline`}>{option.votes.length} phiếu</span>
                                                   </div>
                                                   
                                                   <div className="w-full bg-background rounded-full h-2 mb-4 overflow-hidden">
@@ -710,6 +724,52 @@ const Vote: React.FC = () => {
                       >
                           {adding ? 'Đang thêm...' : 'Thêm ngay & Tự động Vote'}
                       </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- VIEW VOTERS MODAL --- */}
+      {viewVotersModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setViewVotersModal({...viewVotersModal, show: false})}>
+              <div className="bg-surface border border-border rounded-2xl w-full max-w-sm p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-start mb-4">
+                      <div>
+                          <h3 className="text-lg font-bold text-white">Danh sách vote</h3>
+                          <p className="text-sm text-primary font-bold">{viewVotersModal.title}</p>
+                      </div>
+                      <button 
+                          onClick={() => setViewVotersModal({...viewVotersModal, show: false})}
+                          className="text-secondary hover:text-white"
+                      >
+                          <XCircle size={24} />
+                      </button>
+                  </div>
+                  
+                  <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
+                      {viewVotersModal.voterIds.length === 0 ? (
+                          <p className="text-center text-secondary py-4">Chưa có ai vote</p>
+                      ) : (
+                          viewVotersModal.voterIds.map(uid => {
+                              const voter = getVoterInfo(uid);
+                              return (
+                                  <div key={uid} className="flex items-center gap-3 bg-background/50 p-2 rounded-lg">
+                                      <img 
+                                          src={voter.avatar} 
+                                          className="w-10 h-10 rounded-full border border-border object-cover" 
+                                      />
+                                      <div>
+                                          <div className="text-sm font-bold text-white">{voter.nickname}</div>
+                                          <div className="text-xs text-secondary">{voter.name}</div>
+                                      </div>
+                                  </div>
+                              )
+                          })
+                      )}
+                  </div>
+                  
+                  <div className="mt-4 text-center text-xs text-secondary border-t border-border pt-2">
+                      Tổng cộng: {viewVotersModal.voterIds.length} người
                   </div>
               </div>
           </div>
