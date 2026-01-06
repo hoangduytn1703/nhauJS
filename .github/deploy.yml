@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 #
 on:
   push:
-    branches: ["main", "master"] # Chạy khi push vào cả main và master
+    branches: ["main"] # Chạy khi push main
   workflow_dispatch: # Cho phép bấm nút "Run workflow" thủ công trong tab Actions
 
 permissions:
@@ -48,4 +48,5 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
+
         uses: actions/deploy-pages@v4
