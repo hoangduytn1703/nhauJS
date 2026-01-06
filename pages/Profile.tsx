@@ -2,17 +2,13 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { DataService } from '../services/mockService';
 import { User, UserRole } from '../types';
-import { Badge, Edit, Save, Camera, AlertTriangle, Download } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { Badge, Edit, Save, Camera, AlertTriangle } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState<Partial<User>>(user || {});
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Ref for the card element to capture
-  const cardRef = useRef<HTMLDivElement>(null);
 
   if (!user) return null;
 
@@ -49,30 +45,6 @@ const Profile: React.FC = () => {
           alert('Lỗi');
       } finally {
           setSaving(false);
-      }
-  };
-
-  const handleDownloadCard = async () => {
-      if (!cardRef.current) return;
-      try {
-          // Add a small delay to ensure fonts/images are ready (though usually they are)
-          await document.fonts.ready;
-          
-          const canvas = await html2canvas(cardRef.current, {
-              backgroundColor: null, // Transparent background
-              scale: 3, // High resolution
-              useCORS: true, // Handle cross-origin images
-              logging: false,
-              allowTaint: true, 
-          });
-          
-          const link = document.createElement('a');
-          link.download = `DanChoiCard_${user.nickname.replace(/\s+/g, '_')}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-      } catch (err) {
-          console.error(err);
-          alert('Không thể tải ảnh. Vui lòng thử lại.');
       }
   };
 
@@ -248,8 +220,12 @@ const Profile: React.FC = () => {
             {/* Preview Card */}
             <div className="lg:col-span-5 relative mt-8 lg:mt-0">
                 <div className="sticky top-24 flex flex-col items-center">
+                     <div className="w-full flex justify-between items-center mb-4 max-w-[350px]">
+                         <h3 className="text-white font-bold text-lg">Thẻ thành viên</h3>
+                         {/* Removed Download Button */}
+                     </div>
+                     
                      <div 
-                        ref={cardRef}
                         className="relative rounded-2xl overflow-hidden shadow-2xl border border-secondary/30 group bg-[#1a120b] shrink-0"
                         style={{ height: '220px', width: '350px' }}
                      >
@@ -273,11 +249,8 @@ const Profile: React.FC = () => {
                                 <img 
                                     src={formData.avatar || user.avatar} 
                                     className="w-16 h-16 rounded-full border-2 border-secondary object-cover shrink-0" 
-                                    crossOrigin="anonymous" // Important for html2canvas
                                 />
                                 <div className="flex-1 min-w-0 pr-2">
-                                    {/* Removed overflow-hidden from parent div to avoid cutting text shadows/anti-aliasing in canvas */}
-                                    {/* Changed leading-none to leading-normal or tight to prevent clipping */}
                                     <h2 className="text-white text-xl font-black mb-1 truncate leading-tight pb-1">
                                         {formData.nickname || '...'}
                                     </h2>
@@ -306,10 +279,6 @@ const Profile: React.FC = () => {
                             </div>
                         </div>
                      </div>
-
-                     <p className="text-center text-secondary text-xs mt-4 max-w-[350px]">
-                         Đây là thẻ thành viên chính thức. Hãy tải về và khoe với bạn bè để tăng độ uy tín.
-                     </p>
                 </div>
             </div>
         </div>
