@@ -128,14 +128,16 @@ const Leaderboard: React.FC = () => {
                     <div className="mt-auto flex flex-col items-center gap-4 w-full">
                         <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
                             <DollarSign size={20} />
-                            <span className="font-black text-lg">{u.totalMoney.toLocaleString()}k</span>
+                            <span className="font-black text-lg">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
                         </div>
                         
                         {/* Enlarged Stats Section */}
                         <div className="flex justify-between w-full text-sm font-bold text-white/80 px-2 py-2 border-t border-border/50">
                              <div className="flex flex-col items-center" title="Số lần tham gia">
                                  <Beer size={18} className="text-secondary mb-1"/> 
-                                 <span>{u.attendance}</span>
+                                 <div className="flex items-center gap-1">
+                                    <span>{u.attendance}</span>
+                                 </div>
                              </div>
                              <div className="flex flex-col items-center" title="Số lần bùng kèo">
                                  <AlertTriangle size={18} className="text-red-400 mb-1"/> 
@@ -158,7 +160,7 @@ const Leaderboard: React.FC = () => {
                     <tr>
                         <th className="px-6 py-4 w-16 text-center">#</th>
                         <th className="px-6 py-4">Dân chơi</th>
-                        <th className="px-6 py-4 text-center">Đã chi (k)</th>
+                        <th className="px-6 py-4 text-center">Đã chi (VND)</th>
                         <th className="px-6 py-4 text-center">Tham gia</th>
                         <th className="px-6 py-4 text-center text-red-400">Số lần bùng</th>
                     </tr>
@@ -177,10 +179,12 @@ const Leaderboard: React.FC = () => {
                                 </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                                <span className="font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">{u.totalMoney.toLocaleString()}</span>
+                                <span className="font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                                <span className="text-secondary">{u.attendance}</span>
+                                <span className="text-secondary flex items-center justify-center gap-1">
+                                    {u.attendance} <Beer size={14} className="mb-0.5"/>
+                                </span>
                             </td>
                             <td className="px-6 py-4 text-center">
                                 {(u.flakeCount || 0) > 0 ? (

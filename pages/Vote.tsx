@@ -463,7 +463,8 @@ const Vote: React.FC = () => {
                                                     ${isWinner ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105 z-10' : ''}
                                                     ${isDimmed ? 'opacity-40 grayscale border-border' : ''}
                                                     ${!ended && isVoted ? 'bg-primary/20 border-primary' : ''}
-                                                    ${!ended && !isVoted ? `bg-surface border-border ${isAdmin ? '' : 'hover:border-secondary cursor-pointer'}` : ''}
+                                                    ${!ended && !isVoted ? `bg-surface border-border ${isAdmin ? '' : 'hover:border-secondary cursor-pointer hover:border-primary'}` : ''}
+                                                    ${!ended && !isAdmin ? 'cursor-pointer' : ''}
                                                 `}
                                             >
                                                 {/* Winner Badge */}
@@ -591,7 +592,7 @@ const Vote: React.FC = () => {
                                                                   href={option.description} 
                                                                   target="_blank" 
                                                                   rel="noopener noreferrer" 
-                                                                  className="text-xs font-medium text-blue-400 hover:text-blue-300 hover:underline break-all"
+                                                                  className="text-sm font-medium text-blue-400 hover:text-blue-300 hover:underline break-all"
                                                                   onClick={(e) => e.stopPropagation()}
                                                               >
                                                                   {option.description}

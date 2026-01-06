@@ -10,6 +10,7 @@ import Vote from './pages/Vote';
 import Admin from './pages/Admin';
 import Leaderboard from './pages/Leaderboard';
 import BillSplit from './pages/BillSplit';
+import Members from './pages/Members';
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -176,6 +177,12 @@ const App: React.FC = () => {
             <Route path="/bills" element={
               <ProtectedRoute>
                 <BillSplit />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/members" element={
+              <ProtectedRoute>
+                <Members />
               </ProtectedRoute>
             } />
             

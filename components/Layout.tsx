@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../App';
 import { Link, useLocation } from 'react-router-dom';
-import { Beer, LogOut, BarChart3, Settings, Home, Receipt } from 'lucide-react';
+import { Beer, LogOut, BarChart3, Settings, Home, Receipt, Users } from 'lucide-react';
 import { UserRole } from '../types';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,6 +29,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div className="hidden md:flex items-center gap-6">
               <Link to="/" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/') ? 'text-primary' : 'text-secondary'}`}>
                 Vote Kèo
+              </Link>
+              <Link to="/members" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/members') ? 'text-primary' : 'text-secondary'}`}>
+                Thành viên
               </Link>
               <Link to="/leaderboard" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/leaderboard') ? 'text-primary' : 'text-secondary'}`}>
                 BXH
@@ -70,20 +73,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <Home size={22} />
               <span className="text-[10px] font-medium">Vote</span>
            </Link>
+           <Link to="/members" className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive('/members') ? 'text-primary bg-primary/10' : 'text-secondary'}`}>
+              <Users size={22} />
+              <span className="text-[10px] font-medium">Member</span>
+           </Link>
            <Link to="/leaderboard" className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive('/leaderboard') ? 'text-primary bg-primary/10' : 'text-secondary'}`}>
               <BarChart3 size={22} />
               <span className="text-[10px] font-medium">BXH</span>
            </Link>
            <Link to="/bills" className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive('/bills') ? 'text-primary bg-primary/10' : 'text-secondary'}`}>
               <Receipt size={22} />
-              <span className="text-[10px] font-medium">Tính Tiền</span>
+              <span className="text-[10px] font-medium">Bill</span>
            </Link>
-           {user.role === UserRole.ADMIN && (
-             <Link to="/admin" className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive('/admin') ? 'text-primary bg-primary/10' : 'text-secondary'}`}>
-                <Settings size={22} />
-                <span className="text-[10px] font-medium">Admin</span>
-             </Link>
-           )}
+           
            <button onClick={logout} className="flex flex-col items-center gap-1 p-2 rounded-lg text-secondary active:text-red-400">
                <LogOut size={22} />
                <span className="text-[10px] font-medium">Thoát</span>
