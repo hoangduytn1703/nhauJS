@@ -455,9 +455,10 @@ const Admin: React.FC = () => {
             <div className="flex gap-2 bg-surface p-1 rounded-full border border-border">
                 <button 
                     onClick={() => setActiveTab('USERS')} 
-                    className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'USERS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
+                    className={`px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 ${activeTab === 'USERS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
                 >
                     Thành viên
+                    <span className="bg-black/20 px-2 py-0.5 rounded-full text-[10px] font-black">{users.length}</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('POLLS')} 
@@ -558,6 +559,7 @@ const Admin: React.FC = () => {
             </div>
         )}
 
+        {/* ... POLLS TAB CONTENT SAME AS BEFORE ... */}
         {activeTab === 'POLLS' && (
             <div className="grid lg:grid-cols-2 gap-8">
                 {/* Create/Edit Poll Form */}
