@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/mockService';
 import { User, Poll, PollOption, UserRole } from '../types';
 import { useAuth } from '../App';
-import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote } from 'lucide-react';
+import { Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
+import { PollResultModal } from '../components/PollResultModal';
 
 // Helper to format date for input type="date"
 const toInputDate = (timestamp: number) => {
@@ -30,13 +31,12 @@ const Admin: React.FC = () => {
   const [resultDate, setResultDate] = useState<string>(''); // YYYY-MM-DD
   
   // Location Options State
-  // Split description into description (address) and notes
   const [pollOptions, setPollOptions] = useState<{id?: string, text: string, description: string, notes: string, votes?: string[]}[]>([
       { text: '', description: '', notes: '' }, 
       { text: '', description: '', notes: '' }
   ]);
   
-  // Time Options State (Now Date Options)
+  // Time Options State
   const [timeOptions, setTimeOptions] = useState<{id?: string, text: string, votes?: string[]}[]>([
       { text: '' },
       { text: '' }
@@ -54,6 +54,9 @@ const Admin: React.FC = () => {
   const [finalizingPollId, setFinalizingPollId] = useState<string | null>(null);
   const [selectedFinalTime, setSelectedFinalTime] = useState<string>('');
   const [selectedFinalLoc, setSelectedFinalLoc] = useState<string>('');
+  
+  // View Results Modal State
+  const [viewResultPoll, setViewResultPoll] = useState<Poll | null>(null);
 
   // User Info Edit State
   const [statsForm, setStatsForm] = useState({
@@ -89,8 +92,6 @@ const Admin: React.FC = () => {
 
   const submitUserStats = async () => {
       if (!editingUserStats) return;
-      
-      // Validation (Logic from Profile.tsx)
       const nameRegex = /^[\p{L}\s]{3,50}$/u;
       
       if (!statsForm.nickname.trim() || !nameRegex.test(statsForm.nickname)) {
@@ -127,17 +128,15 @@ const Admin: React.FC = () => {
       setDeadlineDate(toInputDate(poll.deadline));
       setResultDate(toInputDate(poll.resultDate));
       
-      // Map existing options to form
       const formOptions = poll.options.map(o => ({
           id: o.id,
           text: o.text,
-          description: o.description || '', // Address/Map Link
-          notes: o.notes || '', // Notes
+          description: o.description || '',
+          notes: o.notes || '',
           votes: o.votes
       }));
       setPollOptions(formOptions);
 
-      // Map existing time options
       const formTimes = (poll.timeOptions || []).map(t => ({
           id: t.id,
           text: t.text,
@@ -149,11 +148,9 @@ const Admin: React.FC = () => {
            setTimeOptions(formTimes);
       }
       
-      // Pre-select finalize values if any
       setSelectedFinalTime(poll.finalizedTimeId || '');
       setSelectedFinalLoc(poll.finalizedOptionId || '');
 
-      // Scroll to form
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -177,7 +174,6 @@ const Admin: React.FC = () => {
   // Helper to create timestamp at 16:00:00 VN Time (+7)
   const createFixedTimestamp = (dateString: string) => {
       if (!dateString) return 0;
-      // Append time and zone
       const combined = `${dateString}T16:00:00+07:00`;
       return new Date(combined).getTime();
   };
@@ -205,7 +201,6 @@ const Admin: React.FC = () => {
 
       try {
         if (editingPollId) {
-            // Update mode
             const updatedOptions: PollOption[] = validOptions.map((opt, idx) => ({
                 id: opt.id || `opt_loc_${Date.now()}_${idx}`,
                 text: opt.text,
@@ -254,7 +249,6 @@ const Admin: React.FC = () => {
           }
       } else {
           setConfirmDeleteId(pollId);
-          // Auto reset confirm state after 3 seconds
           setTimeout(() => setConfirmDeleteId(null), 3000);
       }
   }
@@ -262,12 +256,6 @@ const Admin: React.FC = () => {
   // --- REOPEN LOGIC ---
   const handleReopenPoll = async (poll: Poll) => {
       if (!isAdmin) return;
-      const isFinalized = !!poll.finalizedOptionId || !!poll.finalizedTimeId;
-      
-      if (!isFinalized) {
-          return;
-      }
-
       if (confirmReopenId === poll.id) {
           try {
               await DataService.updatePoll(poll.id, {
@@ -286,7 +274,6 @@ const Admin: React.FC = () => {
       }
   };
 
-  // --- HIDE POLL LOGIC ---
   const handleToggleHidePoll = async (poll: Poll) => {
       if (!isAdmin) return;
       try {
@@ -297,8 +284,6 @@ const Admin: React.FC = () => {
       }
   }
 
-  // --- USER MANAGEMENT LOGIC ---
-
   const handleToggleBan = async (targetUser: User) => {
       if (!isAdmin) return;
       if (targetUser.id === user?.id) return alert("Không thể tự ban chính mình!");
@@ -306,7 +291,6 @@ const Admin: React.FC = () => {
       setProcessingUserId(targetUser.id);
       try {
           await DataService.toggleBanUser(targetUser.id, !targetUser.isBanned);
-          // Update local state
           setUsers(prev => prev.map(u => u.id === targetUser.id ? {...u, isBanned: !targetUser.isBanned} : u));
       } catch (e) {
           alert("Lỗi khi cập nhật trạng thái Ban");
@@ -355,7 +339,6 @@ const Admin: React.FC = () => {
       }
   };
 
-  // --- Finalize Logic ---
   const handleFinalizeClick = (poll: Poll) => {
       if (!isAdmin) return;
       if (finalizingPollId === poll.id) {
@@ -396,7 +379,6 @@ const Admin: React.FC = () => {
       return options.filter(o => o.votes.length === maxVotes);
   }
 
-  // Location handlers
   const handleOptionChange = (idx: number, field: 'text' | 'description' | 'notes', val: string) => {
       const newOpts = [...pollOptions];
       newOpts[idx] = { ...newOpts[idx], [field]: val };
@@ -408,7 +390,6 @@ const Admin: React.FC = () => {
       setPollOptions(pollOptions.filter((_, i) => i !== idx));
   };
 
-  // Time handlers
   const handleTimeChange = (idx: number, val: string) => {
       const newTimes = [...timeOptions];
       newTimes[idx] = { ...newTimes[idx], text: val };
@@ -428,6 +409,13 @@ const Admin: React.FC = () => {
             allPolls={polls}
             currentUserRole={user?.role}
             onToggleAttendance={handleToggleAttendance}
+        />
+
+        {/* --- VIEW RESULTS MODAL (Reusable) --- */}
+        <PollResultModal 
+            poll={viewResultPoll} 
+            users={users} 
+            onClose={() => setViewResultPoll(null)} 
         />
 
         {/* --- EDIT INFO MODAL (ADMIN ONLY) --- */}
@@ -637,12 +625,13 @@ const Admin: React.FC = () => {
             </div>
         )}
 
-        {/* ... POLLS TAB ... */}
+        {/* ... POLLS TAB (40/60 Split Row with Swapped Positions) ... */}
         {activeTab === 'POLLS' && (
-            <div className={`grid gap-8 ${isAdmin ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
-                {/* Create/Edit Poll Form (Only Admin) */}
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+                
+                {/* 1. Create/Edit Form (40% - Moved to Left) */}
                 {isAdmin && (
-                    <div className="bg-surface p-8 rounded-2xl border border-border h-fit">
+                    <div className="w-full lg:w-[50%] lg:sticky lg:top-24 h-fit max-h-[calc(100vh-8rem)] overflow-y-auto bg-surface p-6 rounded-2xl border border-border shadow-xl custom-scrollbar order-1">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 {editingPollId ? <Edit2 className="text-primary"/> : <Plus className="text-primary"/>} 
@@ -654,7 +643,6 @@ const Admin: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                             {/* ... Form Inputs (Same as before) ... */}
                             <div className="flex flex-col gap-4">
                                 <div>
                                     <label className="text-sm font-bold text-white block mb-2">Tiêu đề</label>
@@ -666,7 +654,7 @@ const Admin: React.FC = () => {
                                 </div>
 
                                 {/* Settings Row */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="text-sm font-bold text-white block mb-2 flex items-center gap-1"><Calendar size={14}/> Deadline Vote (Date)</label>
                                         <input 
@@ -703,7 +691,7 @@ const Admin: React.FC = () => {
                             {/* Time Options (Date) */}
                             <div>
                                 <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2"><Calendar size={16}/> Chọn ngày chiến (Date Options)</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     {timeOptions.map((opt, idx) => (
                                         <div key={idx} className="bg-background p-2 rounded-lg border border-border flex gap-2 items-center relative">
                                              <input 
@@ -735,7 +723,7 @@ const Admin: React.FC = () => {
                                                     value={opt.text} 
                                                     onChange={e => handleOptionChange(idx, 'text', e.target.value)} 
                                                     className="flex-1 bg-transparent border-b border-border focus:border-primary text-white font-bold outline-none pb-1"
-                                                    placeholder={`Tên quán (VD: Bia Hải Xồm)`}
+                                                    placeholder={`Tên quán`}
                                                 />
                                                 {pollOptions.length > 2 && (
                                                     <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
@@ -749,7 +737,7 @@ const Admin: React.FC = () => {
                                                     value={opt.description}
                                                     onChange={e => handleOptionChange(idx, 'description', e.target.value)}
                                                     className="w-full bg-transparent text-xs text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
-                                                    placeholder="Địa chỉ hoặc Link Google Map..."
+                                                    placeholder="Địa chỉ..."
                                                 />
                                             </div>
 
@@ -760,7 +748,7 @@ const Admin: React.FC = () => {
                                                     value={opt.notes}
                                                     onChange={e => handleOptionChange(idx, 'notes', e.target.value)}
                                                     className="w-full bg-transparent text-xs text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
-                                                    placeholder="Ghi chú (Pass wifi, chỗ gửi xe...)"
+                                                    placeholder="Ghi chú..."
                                                 />
                                             </div>
                                         </div>
@@ -777,9 +765,9 @@ const Admin: React.FC = () => {
                         </form>
                     </div>
                 )}
-
-                {/* List Polls */}
-                <div className="space-y-4">
+                
+                {/* 2. Poll List (60% - Moved to Right) */}
+                <div className="w-full lg:w-[50%] space-y-4 order-2">
                     <h2 className="text-xl font-bold text-white mb-4">Danh sách kèo</h2>
                     {polls.map(poll => {
                         const isExpired = poll.deadline > 0 && Date.now() > poll.deadline;
@@ -817,7 +805,16 @@ const Admin: React.FC = () => {
                                 
                                 {/* Quick Actions - Only for Admin */}
                                 {isAdmin && (
-                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border flex-wrap">
+                                        {/* View Results Button */}
+                                        <button 
+                                            onClick={() => setViewResultPoll(poll)}
+                                            className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded hover:bg-blue-600/40 font-bold transition-all"
+                                            title="Xem kết quả"
+                                        >
+                                            <Trophy size={14}/> Xem KQ
+                                        </button>
+
                                         <button 
                                             onClick={() => handleEditClick(poll)}
                                             className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold"

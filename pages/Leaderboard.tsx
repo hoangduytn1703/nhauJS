@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
-import { User, Poll } from '../types';
+import { User, Poll, UserRole } from '../types';
 import { Crown, Beer, Eye, CheckCircle, DollarSign, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../App';
 import { UserDetailModal } from '../components/UserDetailModal';
@@ -22,6 +22,26 @@ const Leaderboard: React.FC = () => {
         setLoading(false);
     });
   }, []);
+
+  // --- ENABLE CHECK-IN FOR ADMIN ---
+  const handleToggleAttendance = async (pollId: string, userId: string) => {
+      if (user?.role !== UserRole.ADMIN) return;
+      try {
+          await DataService.toggleAttendance(pollId, userId);
+          setPolls(prev => prev.map(p => {
+              if (p.id !== pollId) return p;
+              let attended = p.confirmedAttendances || [];
+              if (attended.includes(userId)) {
+                  attended = attended.filter(id => id !== userId);
+              } else {
+                  attended = [...attended, userId];
+              }
+              return { ...p, confirmedAttendances: attended };
+          }));
+      } catch (e) {
+          alert('Lỗi khi cập nhật tham gia');
+      }
+  };
 
   // Calculate scores
   const userStats = users
@@ -100,7 +120,7 @@ const Leaderboard: React.FC = () => {
             onClose={() => setSelectedUser(null)} 
             allPolls={polls}
             currentUserRole={user?.role}
-            // Read-only mode for leaderboard
+            onToggleAttendance={handleToggleAttendance}
         />
 
         <div className="text-center py-8">
@@ -122,8 +142,11 @@ const Leaderboard: React.FC = () => {
                         </div>
                     </div>
                     <img src={u.avatar} className="w-24 h-24 rounded-full border-4 border-background mb-4 mt-6 object-cover" />
-                    <h3 className="text-xl font-bold text-white text-center">{u.nickname}</h3>
-                    <p className="text-secondary text-sm mb-2 text-center line-clamp-1 italic">"{u.quote}"</p>
+                    
+                    {/* SWAPPED: Real Name is bigger, Nickname is smaller */}
+                    <h3 className="text-xl font-black text-white text-center uppercase">{u.name}</h3>
+                    <p className="text-primary font-bold text-sm mb-1 text-center">{u.nickname}</p>
+                    <p className="text-secondary text-xs mb-2 text-center line-clamp-1 italic">"{u.quote}"</p>
                     
                     <div className="mt-auto flex flex-col items-center gap-4 w-full">
                         <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
@@ -173,8 +196,9 @@ const Leaderboard: React.FC = () => {
                                 <div className="flex items-center gap-3">
                                     <img src={u.avatar} className="w-10 h-10 rounded-full object-cover" />
                                     <div>
-                                        <div className="font-bold text-white">{u.nickname}</div>
-                                        <div className="text-xs">{u.name}</div>
+                                        {/* SWAPPED: Real Name is BOLD, Nickname is small */}
+                                        <div className="font-bold text-white uppercase">{u.name}</div>
+                                        <div className="text-xs text-primary font-bold">{u.nickname}</div>
                                     </div>
                                 </div>
                             </td>

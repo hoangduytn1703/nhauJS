@@ -4,12 +4,14 @@ import { Poll, User, PollOption } from '../types';
 import { useAuth } from '../App';
 import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon, StickyNote, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PollResultModal } from '../components/PollResultModal';
 
 const Vote: React.FC = () => {
   const { user } = useAuth();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [userMap, setUserMap] = useState<Record<string, User>>({});
+  const [users, setUsers] = useState<User[]>([]); // Array of users for Modal
   
   // Local state for reason input
   const [declineReason, setDeclineReason] = useState<string>('');
@@ -30,6 +32,9 @@ const Vote: React.FC = () => {
 
   // View Voters Modal State
   const [viewVotersModal, setViewVotersModal] = useState<{show: boolean, title: string, voterIds: string[]}>({show: false, title: '', voterIds: []});
+  
+  // View Poll Result Modal State
+  const [viewResultPoll, setViewResultPoll] = useState<Poll | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -44,6 +49,7 @@ const Vote: React.FC = () => {
          usersData.forEach(u => map[u.id] = u);
          
          setUserMap(map);
+         setUsers(usersData);
          
          // Filter out hidden polls
          const visiblePolls = pollsData.filter(p => !p.isHidden);
@@ -192,6 +198,14 @@ const Vote: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-8 pb-20">
+      
+      {/* --- REUSABLE RESULTS MODAL --- */}
+      <PollResultModal 
+          poll={viewResultPoll} 
+          users={users} 
+          onClose={() => setViewResultPoll(null)} 
+      />
+
       {/* Hero */}
       <section className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-6 border-b border-border">
           <div className="flex flex-col gap-4 max-w-2xl">
@@ -680,36 +694,57 @@ const Vote: React.FC = () => {
                {/* --- Final Conclusion Card --- */}
                {ended && (
                    <div className="mt-8 animate-in zoom-in duration-500">
-                       <div className={`rounded-2xl p-6 border-2 flex flex-col md:flex-row items-center gap-6 text-center md:text-left shadow-2xl ${isWaitingAdmin ? 'bg-surface border-dashed border-orange-500/50' : 'bg-gradient-to-br from-yellow-900/50 to-surface border-yellow-500'}`}>
-                           <div className={`w-16 h-16 rounded-full flex items-center justify-center shrink-0 ${isWaitingAdmin ? 'bg-orange-500/20 text-orange-500 animate-pulse' : 'bg-yellow-500 text-black'}`}>
-                               {isWaitingAdmin ? <Clock size={32}/> : <Trophy size={32} className="animate-bounce"/>}
-                           </div>
-                           <div className="flex-1">
-                               <h3 className={`text-xl font-black uppercase mb-2 ${isWaitingAdmin ? 'text-orange-500' : 'text-yellow-400'}`}>
-                                   {isWaitingAdmin ? 'ĐANG CHỜ ADMIN CHỐT KÈO' : 'CHỐT ĐƠN! LÊN ĐỒ ĐI NHẬU'}
-                               </h3>
-                               <div className="space-y-1 text-lg">
-                                   <div className="flex flex-col md:flex-row gap-1 md:gap-2 justify-center md:justify-start">
-                                       <span className="text-secondary">Thời gian:</span>
-                                       <span className="font-bold text-white">{finalTimeText}</span>
-                                   </div>
-                                   <div className="flex flex-col md:flex-row gap-1 md:gap-2 justify-center md:justify-start items-center md:items-start">
-                                       <span className="text-secondary">Địa điểm:</span>
-                                       <div className="flex flex-col md:flex-row items-center gap-2">
-                                           <span className="font-bold text-white">{finalLocText}</span>
-                                           {finalLocUrl && (
-                                               <a href={finalLocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs bg-white text-black px-2 py-0.5 rounded font-bold hover:bg-primary hover:text-white transition-colors">
-                                                   <MapPin size={10} /> Xem Map <ExternalLink size={10}/>
-                                               </a>
-                                           )}
-                                       </div>
-                                   </div>
+                       <div className={`rounded-2xl p-6 md:p-8 border-2 shadow-2xl relative overflow-hidden ${isWaitingAdmin ? 'bg-surface border-dashed border-orange-500/50' : 'bg-gradient-to-br from-[#3e2c1c] via-surface to-[#1a120b] border-yellow-500/80'}`}>
+                           
+                           {/* Decorative BG */}
+                           {!isWaitingAdmin && <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none"></div>}
+
+                           <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left relative z-10">
+                               <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center shrink-0 border-4 border-surface shadow-xl ${isWaitingAdmin ? 'bg-orange-500/20 text-orange-500 animate-pulse' : 'bg-yellow-500 text-black'}`}>
+                                   {isWaitingAdmin ? <Clock size={40}/> : <Trophy size={40} className="animate-bounce"/>}
                                </div>
-                               {isWaitingAdmin && (
-                                   <p className="text-sm text-secondary/70 mt-3 italic bg-background/50 px-3 py-1 rounded inline-block">
-                                       * Có nhiều option bằng phiếu hoặc chưa được Admin xác nhận cuối cùng.
-                                   </p>
-                               )}
+                               
+                               <div className="flex-1 space-y-4">
+                                   <div>
+                                       <h3 className={`text-2xl md:text-3xl font-black uppercase mb-2 leading-none ${isWaitingAdmin ? 'text-orange-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200'}`}>
+                                           {isWaitingAdmin ? 'ĐANG CHỜ ADMIN CHỐT KÈO' : 'CHỐT ĐƠN! LÊN ĐỒ ĐI NHẬU'}
+                                       </h3>
+                                       {!isWaitingAdmin && <p className="text-secondary text-sm">Kết quả chính thức đã được ban hành!</p>}
+                                   </div>
+
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-4 rounded-xl border border-white/5">
+                                        <div className="flex flex-col items-center md:items-start">
+                                            <span className="text-secondary text-xs font-bold uppercase mb-1 flex items-center gap-1"><Calendar size={12}/> Thời gian</span>
+                                            <span className="font-black text-xl md:text-2xl text-white">{finalTimeText}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center md:items-start border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-4">
+                                            <span className="text-secondary text-xs font-bold uppercase mb-1 flex items-center gap-1"><MapPin size={12}/> Địa điểm</span>
+                                            <span className="font-black text-xl md:text-2xl text-white leading-tight">{finalLocText}</span>
+                                            {finalLocUrl && (
+                                               <a href={finalLocUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider bg-white/10 text-white border border-white/20 px-2 py-1 rounded font-bold hover:bg-white hover:text-black transition-all">
+                                                   Xem Bản Đồ <ExternalLink size={10}/>
+                                               </a>
+                                            )}
+                                        </div>
+                                   </div>
+
+                                   {/* View Detailed Result Button */}
+                                   <div className="flex justify-center md:justify-start">
+                                       <button 
+                                            onClick={() => setViewResultPoll(poll)}
+                                            className="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 group"
+                                       >
+                                            <Users size={18} className="text-secondary group-hover:text-white transition-colors"/>
+                                            Xem chi tiết kết quả (Ai đi / Ai bùng?)
+                                       </button>
+                                   </div>
+
+                                   {isWaitingAdmin && (
+                                       <p className="text-sm text-secondary/70 italic">
+                                           * Đang chờ Admin xác nhận kết quả cuối cùng.
+                                       </p>
+                                   )}
+                               </div>
                            </div>
                        </div>
                    </div>

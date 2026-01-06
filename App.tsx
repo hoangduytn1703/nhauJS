@@ -47,6 +47,13 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   };
 
   const updateUser = (data: Partial<User>) => {
+    // SECURITY GUARD: Check if 'data' is a SyntheticEvent or DOM Event
+    // This prevents "Converting circular structure to JSON" error if updateUser is attached directly to onClick
+    if (data && (data as any).preventDefault !== undefined) {
+        console.warn("Attempted to pass an Event object to updateUser. Ignoring.");
+        return;
+    }
+
     if (user) {
       const updated = { ...user, ...data };
       setUser(updated);
@@ -85,6 +92,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             }
         } catch (e) {
             console.error("Failed to sync user profile", e);
+            // Clear corrupted data if JSON parse fails
+            localStorage.removeItem('nhau_user');
+            sessionStorage.removeItem('nhau_user');
         } finally {
             setLoading(false); // Done loading regardless of result
         }

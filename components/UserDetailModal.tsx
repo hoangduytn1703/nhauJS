@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Poll, UserRole } from '../types';
-import { X, Calendar, CheckCircle, AlertTriangle, Trophy } from 'lucide-react';
+import { X, Calendar, CheckCircle, AlertTriangle, Trophy, UserX } from 'lucide-react';
 
 interface UserDetailModalProps {
     user: User | null;
@@ -14,7 +14,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     user, 
     onClose, 
     allPolls, 
-    currentUserRole,
+    currentUserRole, 
     onToggleAttendance 
 }) => {
     if (!user) return null;
@@ -138,50 +138,68 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                             <th className="px-4 py-3">Kèo</th>
                                             <th className="px-4 py-3">Ngày</th>
                                             <th className="px-4 py-3 text-center">Đã Vote?</th>
-                                            <th className="px-4 py-3 text-center">Tham gia (Check)</th>
+                                            <th className="px-4 py-3 text-center">Trạng thái (Admin Check)</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border bg-surface/50">
                                         {history.map((item, idx) => (
                                             <tr key={item.poll.id} className="hover:bg-background/50 transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="font-bold text-white">{item.poll.title}</div>
-                                                    <div className="text-xs text-secondary/70 line-clamp-1">{item.poll.description}</div>
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    {new Date(item.poll.createdAt).toLocaleDateString('vi-VN')}
+                                                <td className="px-4 py-3 font-medium text-white max-w-[150px] truncate">{item.poll.title}</td>
+                                                <td className="px-4 py-3">{new Date(item.poll.createdAt).toLocaleDateString('vi-VN')}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {item.isVotedFull ? <span className="text-green-400">✓</span> : <span className="text-secondary opacity-30">-</span>}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    {item.isVotedFull ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-green-400 font-bold">
-                                                            <CheckCircle size={12} /> Full Option
-                                                        </span>
+                                                    {currentUserRole === 'ADMIN' && onToggleAttendance ? (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {/* Check-in Button */}
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (!item.isAttended) onToggleAttendance(item.poll.id, user.id);
+                                                                }}
+                                                                className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${
+                                                                    item.isAttended 
+                                                                    ? 'bg-green-600 border-green-600 text-white cursor-default' 
+                                                                    : 'bg-surface border-border text-secondary hover:bg-green-500/10 hover:border-green-500 hover:text-green-500'
+                                                                }`}
+                                                                title="Xác nhận có mặt"
+                                                            >
+                                                                {item.isAttended && <CheckCircle size={12}/>} Check-in
+                                                            </button>
+
+                                                            {/* Bùng Button - Only if Joined */}
+                                                            {item.isJoined && (
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if (item.isAttended) onToggleAttendance(item.poll.id, user.id);
+                                                                    }}
+                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${
+                                                                        !item.isAttended 
+                                                                        ? 'bg-red-600 border-red-600 text-white cursor-default' 
+                                                                        : 'bg-surface border-border text-secondary hover:bg-red-500/10 hover:border-red-500 hover:text-red-500'
+                                                                    }`}
+                                                                    title="Xác nhận bùng kèo"
+                                                                >
+                                                                    {!item.isAttended && <UserX size={12}/>} Bùng
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-secondary">
-                                                            Chưa vote đủ
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {currentUserRole === UserRole.ADMIN ? (
-                                                        <button 
-                                                            onClick={() => onToggleAttendance && onToggleAttendance(item.poll.id, user.id)}
-                                                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                                                                item.isAttended 
-                                                                ? 'bg-green-500/20 text-green-500 border-green-500/30 hover:bg-green-500/30' 
-                                                                : 'bg-surface text-secondary border-border hover:border-primary hover:text-white'
-                                                            }`}
-                                                        >
-                                                            {item.isAttended ? 'Đã Check-in' : 'Chưa Check-in'}
-                                                        </button>
-                                                    ) : (
-                                                        item.isAttended ? (
-                                                            <span className="text-green-500 font-bold flex items-center justify-center gap-1">
-                                                                <CheckCircle size={14}/> Có mặt
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-secondary opacity-50">-</span>
-                                                        )
+                                                        <div className="flex justify-center">
+                                                            {item.isAttended ? (
+                                                                <span className="text-green-400 font-bold text-xs bg-green-900/20 px-2 py-1 rounded border border-green-900/30 flex items-center gap-1">
+                                                                    <CheckCircle size={12}/> Có mặt
+                                                                </span>
+                                                            ) : (
+                                                                item.isJoined ? (
+                                                                    <span className="text-red-400 font-bold text-xs bg-red-900/20 px-2 py-1 rounded border border-red-900/30 flex items-center gap-1">
+                                                                        <UserX size={12}/> Bùng kèo
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-secondary opacity-30">-</span>
+                                                                )
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
