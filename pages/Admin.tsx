@@ -495,7 +495,8 @@ const Admin: React.FC = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <div className={`font-bold ${u.isBanned ? 'text-red-400 line-through' : 'text-white'}`}>{u.nickname}</div>
+                                                {/* Changed from nickname to name as requested */}
+                                                <div className={`font-bold ${u.isBanned ? 'text-red-400 line-through' : 'text-white'}`}>{u.name}</div>
                                                 <div className="text-xs">{u.email}</div>
                                             </div>
                                         </div>

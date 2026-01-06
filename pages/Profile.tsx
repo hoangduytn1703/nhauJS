@@ -2,13 +2,17 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { DataService } from '../services/mockService';
 import { User, UserRole } from '../types';
-import { Badge, Edit, Save, Camera, AlertTriangle } from 'lucide-react';
+import { Badge, Edit, Save, Camera, AlertTriangle, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState<Partial<User>>(user || {});
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Ref for the card element to capture
+  const cardRef = useRef<HTMLDivElement>(null);
 
   if (!user) return null;
 
@@ -45,6 +49,30 @@ const Profile: React.FC = () => {
           alert('Lỗi');
       } finally {
           setSaving(false);
+      }
+  };
+
+  const handleDownloadCard = async () => {
+      if (!cardRef.current) return;
+      try {
+          // Add a small delay to ensure fonts/images are ready (though usually they are)
+          await document.fonts.ready;
+          
+          const canvas = await html2canvas(cardRef.current, {
+              backgroundColor: null, // Transparent background
+              scale: 3, // High resolution
+              useCORS: true, // Handle cross-origin images
+              logging: false,
+              allowTaint: true, 
+          });
+          
+          const link = document.createElement('a');
+          link.download = `DanChoiCard_${user.nickname.replace(/\s+/g, '_')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+      } catch (err) {
+          console.error(err);
+          alert('Không thể tải ảnh. Vui lòng thử lại.');
       }
   };
 
@@ -119,7 +147,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap justify-between gap-3 mb-8">
             <div>
                 <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-secondary mb-2">Hồ Sơ Dân Chơi</h1>
@@ -127,7 +155,7 @@ const Profile: React.FC = () => {
             </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-8">
+        <div className="grid lg:grid-cols-12 gap-10">
             {/* Edit Form */}
             <div className="lg:col-span-7 flex flex-col gap-8">
                 {/* Avatar */}
@@ -219,47 +247,69 @@ const Profile: React.FC = () => {
 
             {/* Preview Card */}
             <div className="lg:col-span-5 relative mt-8 lg:mt-0">
-                <div className="sticky top-24">
-                     <h3 className="text-white font-bold text-lg mb-4">Xem trước thẻ thành viên</h3>
-                     <div className="relative w-full aspect-[1.58/1] rounded-2xl overflow-hidden shadow-2xl border border-secondary/30 group">
+                <div className="sticky top-24 flex flex-col items-center">
+                     <div 
+                        ref={cardRef}
+                        className="relative rounded-2xl overflow-hidden shadow-2xl border border-secondary/30 group bg-[#1a120b] shrink-0"
+                        style={{ height: '220px', width: '350px' }}
+                     >
                         {/* Background */}
                         <div className="absolute inset-0 bg-gradient-to-br from-[#493622] via-[#231a10] to-[#1a120b]"></div>
                         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white,transparent)]"></div>
                         
-                        <div className="relative z-10 flex flex-col h-full p-6 justify-between">
+                        <div className="relative z-10 flex flex-col h-full p-5 justify-between">
+                            {/* Header Badges */}
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-secondary font-bold tracking-widest text-xs uppercase border border-secondary px-2 py-0.5 rounded">Official Member</span>
+                                    <span className="text-secondary font-bold tracking-widest text-[10px] uppercase border border-secondary px-1.5 py-0.5 rounded">Official Member</span>
                                 </div>
-                                <div className="bg-gradient-to-r from-primary to-orange-400 text-[#231a10] text-xs font-black px-3 py-1 rounded-full uppercase">
+                                <div className="bg-gradient-to-r from-primary to-orange-400 text-[#231a10] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
                                     Dân Chơi
                                 </div>
                             </div>
 
-                            <div className="flex gap-4 items-end">
-                                <img src={formData.avatar || user.avatar} className="w-20 h-20 rounded-full border-2 border-secondary object-cover" />
-                                <div>
-                                    <h2 className="text-white text-2xl font-black leading-none mb-1">{formData.nickname || '...'}</h2>
-                                    <p className="text-secondary text-xs font-medium uppercase">{formData.name || '...'}</p>
+                            {/* Avatar & Info */}
+                            <div className="flex gap-4 items-center">
+                                <img 
+                                    src={formData.avatar || user.avatar} 
+                                    className="w-16 h-16 rounded-full border-2 border-secondary object-cover shrink-0" 
+                                    crossOrigin="anonymous" // Important for html2canvas
+                                />
+                                <div className="flex-1 min-w-0 pr-2">
+                                    {/* Removed overflow-hidden from parent div to avoid cutting text shadows/anti-aliasing in canvas */}
+                                    {/* Changed leading-none to leading-normal or tight to prevent clipping */}
+                                    <h2 className="text-white text-xl font-black mb-1 truncate leading-tight pb-1">
+                                        {formData.nickname || '...'}
+                                    </h2>
+                                    <div className="flex flex-col">
+                                        <p className="text-secondary text-[10px] font-bold uppercase truncate">{formData.name || '...'}</p>
+                                        <p className="text-secondary/70 text-[9px] font-mono mt-0.5 truncate">{user.email}</p>
+                                    </div>
+                                    
                                     {(user.flakeCount || 0) > 0 && (
-                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded w-fit border border-red-900/30">
-                                            <AlertTriangle size={10} /> {user.flakeCount} Vết nhơ
+                                        <div className="flex items-center gap-1 mt-1 text-[9px] text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded w-fit border border-red-900/30">
+                                            <AlertTriangle size={8} /> {user.flakeCount} Vết nhơ
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-white/10 mt-2">
-                                <p className="text-white/90 text-xs italic">"{formData.quote || '...'}"</p>
-                                <div className="flex justify-between items-center mt-3">
-                                    <div className="flex gap-1 text-[10px] text-secondary uppercase font-bold max-w-[70%] line-clamp-1">
+                            {/* Footer Content */}
+                            <div className="pt-2 border-t border-white/10">
+                                <p className="text-white/90 text-[10px] italic line-clamp-1 mb-1">"{formData.quote || '...'}"</p>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex gap-1 text-[9px] text-secondary uppercase font-bold max-w-[65%] line-clamp-1">
                                         {formData.favoriteDrinks?.length ? formData.favoriteDrinks.join(' • ') : 'Chưa chọn món tủ'}
                                     </div>
-                                    <div className="text-[10px] text-white/50 font-mono">ID: {user.id.toUpperCase().slice(0, 8)}</div>
+                                    <div className="text-[9px] text-white/50 font-mono">ID: {user.id.toUpperCase().slice(0, 6)}</div>
                                 </div>
                             </div>
                         </div>
                      </div>
+
+                     <p className="text-center text-secondary text-xs mt-4 max-w-[350px]">
+                         Đây là thẻ thành viên chính thức. Hãy tải về và khoe với bạn bè để tăng độ uy tín.
+                     </p>
                 </div>
             </div>
         </div>

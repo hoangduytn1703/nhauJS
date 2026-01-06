@@ -19,7 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <Beer size={20} className="md:w-6 md:h-6" />
           </div>
           <span className="text-lg md:text-xl font-bold tracking-tight text-white line-clamp-1">
-             Nhậu JS <span className="hidden sm:inline">- Nơi bất mãn đc giải bày.</span>
+             Nhậu JS <span className="hidden sm:inline">- Framework phê nhất thế giới.</span>
           </span>
         </Link>
 
