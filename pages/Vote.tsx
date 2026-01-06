@@ -585,7 +585,7 @@ const Vote: React.FC = () => {
                                                   {/* Address / Link - Updated for Visibility & Clickable Link */}
                                                   {option.description && (
                                                       <div className="flex items-start gap-2 mt-3">
-                                                          <MapPin size={14} className="shrink-0 mt-0.5 text-secondary" />
+                                                          <MapPin size={16} className="shrink-0 mt-0.5 text-secondary" />
                                                           {isLink(option.description) ? (
                                                               <a 
                                                                   href={option.description} 
@@ -597,7 +597,7 @@ const Vote: React.FC = () => {
                                                                   {option.description}
                                                               </a>
                                                           ) : (
-                                                              <span className="text-xs font-medium text-secondary break-words">{option.description}</span>
+                                                              <span className="text-sm font-medium text-secondary break-words">{option.description}</span>
                                                           )}
                                                       </div>
                                                   )}
@@ -605,8 +605,8 @@ const Vote: React.FC = () => {
                                                   {/* Notes - Updated for Visibility */}
                                                   {option.notes && (
                                                       <div className="flex items-start gap-2 mt-2">
-                                                          <StickyNote size={14} className="shrink-0 mt-0.5 text-secondary" />
-                                                          <span className="text-xs text-secondary/90 italic break-words">{option.notes}</span>
+                                                          <StickyNote size={16} className="shrink-0 mt-0.5 text-secondary" />
+                                                          <span className="text-sm text-secondary/90 italic break-words">{option.notes}</span>
                                                       </div>
                                                   )}
                                               </div>

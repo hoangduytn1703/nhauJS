@@ -1,8 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../App';
 import { DataService } from '../services/mockService';
 import { User, UserRole } from '../types';
-import { Badge, Edit, Save, Camera, AlertTriangle } from 'lucide-react';
+import { Badge, Edit, Save, Camera, AlertTriangle, Plus } from 'lucide-react';
+
+const DEFAULT_TAGS = [
+    'Tiger Bạc (Crystal)', 'Tiger Nâu', 'Heineken', 'Heineken Bạc',
+    'Budweiser', 'Bia Sài Gòn', 'Bia 333', 'Sapporo', 'Beck\'s',
+    'Bia Trúc Bạch', 'Bia Hơi Hà Nội', 'Strongbow',
+    'Rau muống xào tỏi', 'Vịt quay', 'Chả cá mực',
+    'Tàu Hũ chiên', 'Cá chiên', 'Tôm nướng'
+];
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -10,7 +18,24 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // New Tags State
+  const [availableTags, setAvailableTags] = useState<string[]>(DEFAULT_TAGS);
+  const [newTag, setNewTag] = useState('');
+
   if (!user) return null;
+
+  useEffect(() => {
+      // Aggregating all tags from all users
+      DataService.getUsers().then(users => {
+          const allUserTags = new Set<string>(DEFAULT_TAGS);
+          users.forEach(u => {
+              if (u.favoriteDrinks) {
+                  u.favoriteDrinks.forEach(tag => allUserTags.add(tag));
+              }
+          });
+          setAvailableTags(Array.from(allUserTags).sort());
+      });
+  }, []);
 
   const handleSave = async () => {
       // 1. Validation Logic
@@ -94,28 +119,45 @@ const Profile: React.FC = () => {
       reader.readAsDataURL(file);
   };
 
-  // 2. Updated Drink List (Beers only)
-  const drinkOptions = [
-      'Tiger Bạc (Crystal)', 
-      'Tiger Nâu', 
-      'Heineken', 
-      'Heineken Bạc',
-      'Budweiser', 
-      'Bia Sài Gòn', 
-      'Bia 333',
-      'Sapporo', 
-      'Beck\'s',
-      'Bia Trúc Bạch',
-      'Bia Hơi Hà Nội',
-      'Strongbow'
-  ];
-
   const toggleDrink = (drink: string) => {
       const current = formData.favoriteDrinks || [];
       const newDrinks = current.includes(drink) 
         ? current.filter(d => d !== drink)
         : [...current, drink];
       setFormData({ ...formData, favoriteDrinks: newDrinks });
+  };
+
+  const handleAddCustomTag = () => {
+      const trimmed = newTag.trim();
+      if (!trimmed) return;
+
+      // 1. Validation Regex: Vietnamese + Numbers + Spaces only, no special chars
+      const validRegex = /^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/;
+      if (!validRegex.test(trimmed)) {
+          alert("Tên món chỉ được chứa chữ cái tiếng Việt, số và khoảng trắng. Không dùng ký tự đặc biệt.");
+          return;
+      }
+
+      // 2. Check if it's already in the available list (Just select it)
+      if (availableTags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+           // Case insensitive check, but use the formatted one from list or the new one nicely formatted
+           const existing = availableTags.find(t => t.toLowerCase() === trimmed.toLowerCase());
+           toggleDrink(existing || trimmed);
+           setNewTag('');
+           return;
+      }
+
+      // 3. Limit Check: Max 3 custom items (items NOT in DEFAULT_TAGS)
+      const currentCustoms = (formData.favoriteDrinks || []).filter(d => !DEFAULT_TAGS.includes(d));
+      if (currentCustoms.length >= 3) {
+          alert("Bạn chỉ được thêm tối đa 3 món mới (ngoài danh sách mặc định).");
+          return;
+      }
+
+      // 4. Add new
+      setAvailableTags(prev => [...prev, trimmed].sort());
+      toggleDrink(trimmed);
+      setNewTag('');
   };
 
   return (
@@ -190,13 +232,31 @@ const Profile: React.FC = () => {
 
                 {/* Tags */}
                 <div>
-                    <span className="text-white font-medium mb-3 block">Món tủ (Bia)</span>
-                    <div className="flex flex-wrap gap-3">
-                        {drinkOptions.map(drink => (
+                    <span className="text-white font-medium mb-3 block">Món tủ (Đồ ăn & Uống)</span>
+                    
+                    {/* Input Custom Tag */}
+                    <div className="flex gap-2 mb-4">
+                        <input 
+                            value={newTag}
+                            onChange={(e) => setNewTag(e.target.value)}
+                            placeholder="Thêm món tủ khác (Max 3 món mới/người)..."
+                            className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:border-primary outline-none"
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
+                        />
+                        <button 
+                            onClick={handleAddCustomTag}
+                            className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm font-bold"
+                        >
+                            <Plus size={16} /> Thêm
+                        </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        {availableTags.map(drink => (
                             <button
                                 key={drink}
                                 onClick={() => toggleDrink(drink)}
-                                className={`px-5 py-2 rounded-full border transition-all text-sm ${
+                                className={`px-4 py-2 rounded-full border transition-all text-sm text-left ${
                                     formData.favoriteDrinks?.includes(drink)
                                     ? 'bg-primary text-background font-bold border-primary'
                                     : 'bg-surface text-secondary border-border hover:border-primary'
