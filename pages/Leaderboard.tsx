@@ -13,6 +13,10 @@ const Leaderboard: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
     Promise.all([
         DataService.getUsers(),
         DataService.getPolls()
@@ -21,13 +25,14 @@ const Leaderboard: React.FC = () => {
         setPolls(pollsData);
         setLoading(false);
     });
-  }, []);
+  }
 
   // --- ENABLE CHECK-IN FOR ADMIN ---
   const handleToggleAttendance = async (pollId: string, userId: string) => {
       if (user?.role !== UserRole.ADMIN) return;
       try {
           await DataService.toggleAttendance(pollId, userId);
+          // Optimistic update for poll
           setPolls(prev => prev.map(p => {
               if (p.id !== pollId) return p;
               let attended = p.confirmedAttendances || [];
@@ -38,8 +43,28 @@ const Leaderboard: React.FC = () => {
               }
               return { ...p, confirmedAttendances: attended };
           }));
+          // Refresh all data to sync flake counts correctly
+          refreshData();
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
       } catch (e) {
           alert('Lỗi khi cập nhật tham gia');
+      }
+  };
+
+  const handleToggleFlake = async (pollId: string, userId: string) => {
+      if (user?.role !== UserRole.ADMIN) return;
+      try {
+          await DataService.toggleFlake(pollId, userId);
+          refreshData();
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
+      } catch (e) {
+          alert('Lỗi khi cập nhật bùng kèo');
       }
   };
 
@@ -121,6 +146,7 @@ const Leaderboard: React.FC = () => {
             allPolls={polls}
             currentUserRole={user?.role}
             onToggleAttendance={handleToggleAttendance}
+            onToggleFlake={handleToggleFlake}
         />
 
         <div className="text-center py-8">

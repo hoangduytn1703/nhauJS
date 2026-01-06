@@ -8,6 +8,7 @@ interface UserDetailModalProps {
     allPolls: Poll[];
     currentUserRole?: UserRole; // To check permissions
     onToggleAttendance?: (pollId: string, userId: string) => void;
+    onToggleFlake?: (pollId: string, userId: string) => void;
 }
 
 export const UserDetailModal: React.FC<UserDetailModalProps> = ({ 
@@ -15,7 +16,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     onClose, 
     allPolls, 
     currentUserRole, 
-    onToggleAttendance 
+    onToggleAttendance,
+    onToggleFlake
 }) => {
     if (!user) return null;
 
@@ -32,11 +34,15 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         // Admin Confirmed Attendance
         const isAttended = poll.confirmedAttendances?.includes(user.id) || false;
 
+        // Is Flaked? (Check user's profile for this poll ID)
+        const isFlaked = user.flakedPolls?.includes(poll.id) || false;
+
         return {
             poll,
             isJoined,
             isVotedFull,
             isAttended,
+            isFlaked,
             status: participant?.status || 'N/A'
         };
     }).filter(item => item.isJoined || item.isAttended); // Only show relevant polls
@@ -150,9 +156,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                     {item.isVotedFull ? <span className="text-green-400">✓</span> : <span className="text-secondary opacity-30">-</span>}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    {currentUserRole === 'ADMIN' && onToggleAttendance ? (
+                                                    {currentUserRole === 'ADMIN' && onToggleAttendance && onToggleFlake ? (
                                                         <div className="flex items-center justify-center gap-2">
-                                                            {/* Check-in Button */}
+                                                            {/* Check-in Button (Green) */}
                                                             <button 
                                                                 onClick={() => {
                                                                     if (!item.isAttended) onToggleAttendance(item.poll.id, user.id);
@@ -167,20 +173,20 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                                 {item.isAttended && <CheckCircle size={12}/>} Check-in
                                                             </button>
 
-                                                            {/* Bùng Button - Only if Joined */}
+                                                            {/* Flake Button (Red) - Only if Joined */}
                                                             {item.isJoined && (
                                                                 <button 
                                                                     onClick={() => {
-                                                                        if (item.isAttended) onToggleAttendance(item.poll.id, user.id);
+                                                                        onToggleFlake(item.poll.id, user.id);
                                                                     }}
                                                                     className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${
-                                                                        !item.isAttended 
-                                                                        ? 'bg-red-600 border-red-600 text-white cursor-default' 
+                                                                        item.isFlaked
+                                                                        ? 'bg-red-600 border-red-600 text-white cursor-pointer hover:bg-red-700' 
                                                                         : 'bg-surface border-border text-secondary hover:bg-red-500/10 hover:border-red-500 hover:text-red-500'
                                                                     }`}
-                                                                    title="Xác nhận bùng kèo"
+                                                                    title={item.isFlaked ? "Hủy phạt bùng" : "Xác nhận bùng kèo (Phạt)"}
                                                                 >
-                                                                    {!item.isAttended && <UserX size={12}/>} Bùng
+                                                                    {item.isFlaked ? <UserX size={12}/> : <UserX size={12}/>} {item.isFlaked ? 'Đã Bùng' : 'Bùng'}
                                                                 </button>
                                                             )}
                                                         </div>
@@ -191,7 +197,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                                     <CheckCircle size={12}/> Có mặt
                                                                 </span>
                                                             ) : (
-                                                                item.isJoined ? (
+                                                                item.isFlaked ? (
                                                                     <span className="text-red-400 font-bold text-xs bg-red-900/20 px-2 py-1 rounded border border-red-900/30 flex items-center gap-1">
                                                                         <UserX size={12}/> Bùng kèo
                                                                     </span>

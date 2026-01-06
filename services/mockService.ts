@@ -369,22 +369,81 @@ export const DataService = {
     });
   },
 
+  // Toggle Check-in: If checking in, also remove "Flake" penalty if exists
   toggleAttendance: async (pollId: string, userId: string): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
+      const userRef = doc(db, "users", userId);
+
       await runTransaction(db, async (transaction) => {
           const pollDoc = await transaction.get(pollRef);
+          const userDoc = await transaction.get(userRef);
           if (!pollDoc.exists()) throw "Poll not found";
           
           const pollData = pollDoc.data() as Poll;
           let attended = pollData.confirmedAttendances || [];
           
           if (attended.includes(userId)) {
+              // REMOVE Check-in
               attended = attended.filter(id => id !== userId);
           } else {
+              // ADD Check-in
               attended = [...attended, userId];
+              
+              // IF adding check-in, ensure we remove any existing Flake penalty for this poll
+              const userData = userDoc.exists() ? (userDoc.data() as User) : null;
+              if (userData) {
+                  const flakedPolls = userData.flakedPolls || [];
+                  if (flakedPolls.includes(pollId)) {
+                      transaction.update(userRef, {
+                          flakeCount: increment(-1),
+                          flakedPolls: arrayRemove(pollId)
+                      });
+                  }
+              }
           }
           
           transaction.update(pollRef, { confirmedAttendances: attended });
+      });
+  },
+
+  // NEW: Explicitly toggle Flake Penalty
+  toggleFlake: async (pollId: string, userId: string): Promise<void> => {
+      const userRef = doc(db, "users", userId);
+      const pollRef = doc(db, "polls", pollId);
+
+      await runTransaction(db, async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          const pollDoc = await transaction.get(pollRef);
+
+          if (!userDoc.exists() || !pollDoc.exists()) throw "Doc not found";
+
+          const userData = userDoc.data() as User;
+          const pollData = pollDoc.data() as Poll;
+
+          const flakedPolls = userData.flakedPolls || [];
+          const isFlaked = flakedPolls.includes(pollId);
+
+          if (isFlaked) {
+              // REMOVE PENALTY (Forgive)
+              transaction.update(userRef, {
+                  flakeCount: increment(-1),
+                  flakedPolls: arrayRemove(pollId)
+              });
+          } else {
+              // ADD PENALTY (Punish)
+              // If penalizing, ensure they are NOT checked-in
+              let attended = pollData.confirmedAttendances || [];
+              if (attended.includes(userId)) {
+                  transaction.update(pollRef, {
+                      confirmedAttendances: arrayRemove(userId)
+                  });
+              }
+
+              transaction.update(userRef, {
+                  flakeCount: increment(1),
+                  flakedPolls: arrayUnion(pollId)
+              });
+          }
       });
   },
 

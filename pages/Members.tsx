@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
-import { User, Poll } from '../types';
+import { User, Poll, UserRole } from '../types';
 import { Users, Search, Beer, Crown, AlertTriangle } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
+import { useAuth } from '../App';
 
 const Members: React.FC = () => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +14,10 @@ const Members: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
     Promise.all([
         DataService.getUsers(),
         DataService.getPolls()
@@ -20,7 +26,36 @@ const Members: React.FC = () => {
         setPolls(pollsData);
         setLoading(false);
     });
-  }, []);
+  };
+
+  // --- ENABLE CHECK-IN FOR ADMIN ---
+  const handleToggleAttendance = async (pollId: string, userId: string) => {
+      if (user?.role !== UserRole.ADMIN) return;
+      try {
+          await DataService.toggleAttendance(pollId, userId);
+          refreshData(); // Sync both polls and users
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
+      } catch (e) {
+          alert('Lỗi khi cập nhật tham gia');
+      }
+  };
+
+  const handleToggleFlake = async (pollId: string, userId: string) => {
+      if (user?.role !== UserRole.ADMIN) return;
+      try {
+          await DataService.toggleFlake(pollId, userId);
+          refreshData(); // Sync both polls and users
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
+      } catch (e) {
+          alert('Lỗi khi cập nhật bùng kèo');
+      }
+  };
 
   // Filter: Search term AND Exclude Admin
   const filteredUsers = users.filter(u => 
@@ -43,6 +78,9 @@ const Members: React.FC = () => {
             user={selectedUser} 
             onClose={() => setSelectedUser(null)} 
             allPolls={polls}
+            currentUserRole={user?.role}
+            onToggleAttendance={handleToggleAttendance}
+            onToggleFlake={handleToggleFlake}
         />
 
         <div className="mb-8">

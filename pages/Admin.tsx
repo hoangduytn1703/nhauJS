@@ -324,18 +324,29 @@ const Admin: React.FC = () => {
       if (!isAdmin) return;
       try {
           await DataService.toggleAttendance(pollId, userId);
-          setPolls(prev => prev.map(p => {
-              if (p.id !== pollId) return p;
-              let attended = p.confirmedAttendances || [];
-              if (attended.includes(userId)) {
-                  attended = attended.filter(id => id !== userId);
-              } else {
-                  attended = [...attended, userId];
-              }
-              return { ...p, confirmedAttendances: attended };
-          }));
+          // Refresh user list too as toggleAttendance might update user flakeCount
+          refreshData();
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
       } catch (e) {
           alert('Lỗi khi cập nhật tham gia');
+      }
+  };
+
+  const handleToggleFlake = async (pollId: string, userId: string) => {
+      if (!isAdmin) return;
+      try {
+          await DataService.toggleFlake(pollId, userId);
+          // Refresh both as it affects both
+          refreshData();
+          if (selectedUser && selectedUser.id === userId) {
+             const updatedUser = await DataService.getUser(userId);
+             setSelectedUser(updatedUser);
+          }
+      } catch (e) {
+          alert('Lỗi khi cập nhật bùng kèo');
       }
   };
 
@@ -409,6 +420,7 @@ const Admin: React.FC = () => {
             allPolls={polls}
             currentUserRole={user?.role}
             onToggleAttendance={handleToggleAttendance}
+            onToggleFlake={handleToggleFlake}
         />
 
         {/* --- VIEW RESULTS MODAL (Reusable) --- */}
