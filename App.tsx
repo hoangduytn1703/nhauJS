@@ -179,10 +179,11 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } />
             
+            {/* Admin Route is now accessible to regular users (read-only handled in component) */}
             <Route path="/admin" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <Admin />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
 
             {/* Catch all - Redirect to Home */}

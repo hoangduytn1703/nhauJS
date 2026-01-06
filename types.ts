@@ -66,6 +66,9 @@ export interface Poll {
   deadline: number; // Timestamp hết hạn vote
   resultDate: number; // Timestamp công bố kết quả
   
+  // UI Control
+  isHidden?: boolean; // Nếu true thì ẩn khỏi dashboard
+
   // Tracking participation
   participants?: Record<string, ParticipantData>;
   confirmedAttendances?: string[]; // Array of user IDs who actually attended (Admin checked)

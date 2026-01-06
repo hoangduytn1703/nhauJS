@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/mockService';
-import { User, Poll, PollOption } from '../types';
+import { User, Poll, PollOption, UserRole } from '../types';
 import { useAuth } from '../App';
-import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
 
 // Helper to format date for input type="date"
@@ -54,12 +54,16 @@ const Admin: React.FC = () => {
   const [selectedFinalTime, setSelectedFinalTime] = useState<string>('');
   const [selectedFinalLoc, setSelectedFinalLoc] = useState<string>('');
 
-  // User Stats Edit State
+  // User Info Edit State
   const [statsForm, setStatsForm] = useState({
+      name: '',
+      nickname: '',
       attendanceOffset: 0,
       voteOffset: 0,
       flakeCount: 0
   });
+
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
     refreshData();
@@ -74,6 +78,8 @@ const Admin: React.FC = () => {
   const handleEditStatsClick = (u: User) => {
       setEditingUserStats(u);
       setStatsForm({
+          name: u.name,
+          nickname: u.nickname,
           attendanceOffset: u.attendanceOffset || 0,
           voteOffset: u.voteOffset || 0,
           flakeCount: u.flakeCount || 0
@@ -82,13 +88,28 @@ const Admin: React.FC = () => {
 
   const submitUserStats = async () => {
       if (!editingUserStats) return;
+      
+      // Validation (Logic from Profile.tsx)
+      const nameRegex = /^[\p{L}\s]{3,50}$/u;
+      
+      if (!statsForm.nickname.trim() || !nameRegex.test(statsForm.nickname)) {
+          alert('Biệt danh không hợp lệ (3-50 ký tự, chỉ chứa chữ cái)');
+          return;
+      }
+      if (!statsForm.name.trim() || !nameRegex.test(statsForm.name)) {
+          alert('Tên thật không hợp lệ (3-50 ký tự, chỉ chứa chữ cái)');
+          return;
+      }
+
       try {
           await DataService.updateProfile(editingUserStats.id, {
+              name: statsForm.name.trim(),
+              nickname: statsForm.nickname.trim(),
               attendanceOffset: Number(statsForm.attendanceOffset),
               voteOffset: Number(statsForm.voteOffset),
               flakeCount: Number(statsForm.flakeCount)
           });
-          alert("Đã cập nhật chỉ số!");
+          alert("Đã cập nhật thông tin thành viên!");
           setEditingUserStats(null);
           refreshData();
       } catch (e) {
@@ -161,7 +182,7 @@ const Admin: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!user) return;
+      if (!user || !isAdmin) return;
 
       const validOptions = pollOptions.filter(o => o.text.trim() !== '');
       if (validOptions.length < 2) return alert('Cần ít nhất 2 địa điểm');
@@ -177,6 +198,7 @@ const Admin: React.FC = () => {
           resultDate: createFixedTimestamp(resultDate),
           status: 'OPEN' as const,
           createdBy: user.id,
+          isHidden: false,
       };
 
       try {
@@ -218,6 +240,7 @@ const Admin: React.FC = () => {
   };
 
   const handleDeletePoll = async (pollId: string) => {
+      if (!isAdmin) return;
       if (confirmDeleteId === pollId) {
           try {
               await DataService.deletePoll(pollId);
@@ -235,20 +258,18 @@ const Admin: React.FC = () => {
 
   // --- REOPEN LOGIC ---
   const handleReopenPoll = async (poll: Poll) => {
+      if (!isAdmin) return;
       const isFinalized = !!poll.finalizedOptionId || !!poll.finalizedTimeId;
       
       if (!isFinalized) {
-          // Fallback logic, mainly handled by UI visibility
           return;
       }
 
-      // Use UI-based confirmation instead of window.confirm
       if (confirmReopenId === poll.id) {
           try {
               await DataService.updatePoll(poll.id, {
                   finalizedOptionId: null,
                   finalizedTimeId: null
-                  // Không gia hạn deadline
               });
               refreshData();
               if (finalizingPollId === poll.id) setFinalizingPollId(null);
@@ -262,9 +283,21 @@ const Admin: React.FC = () => {
       }
   };
 
+  // --- HIDE POLL LOGIC ---
+  const handleToggleHidePoll = async (poll: Poll) => {
+      if (!isAdmin) return;
+      try {
+          await DataService.updatePoll(poll.id, { isHidden: !poll.isHidden });
+          refreshData();
+      } catch (e) {
+          alert('Lỗi khi ẩn/hiện kèo');
+      }
+  }
+
   // --- USER MANAGEMENT LOGIC ---
 
   const handleToggleBan = async (targetUser: User) => {
+      if (!isAdmin) return;
       if (targetUser.id === user?.id) return alert("Không thể tự ban chính mình!");
       
       setProcessingUserId(targetUser.id);
@@ -280,6 +313,7 @@ const Admin: React.FC = () => {
   };
 
   const handleDeleteUser = async (targetUserId: string) => {
+      if (!isAdmin) return;
       if (targetUserId === user?.id) return alert("Không thể tự xóa chính mình!");
       
       if (confirmDeleteId === targetUserId) {
@@ -300,6 +334,7 @@ const Admin: React.FC = () => {
   };
 
   const handleToggleAttendance = async (pollId: string, userId: string) => {
+      if (!isAdmin) return;
       try {
           await DataService.toggleAttendance(pollId, userId);
           setPolls(prev => prev.map(p => {
@@ -319,6 +354,7 @@ const Admin: React.FC = () => {
 
   // --- Finalize Logic ---
   const handleFinalizeClick = (poll: Poll) => {
+      if (!isAdmin) return;
       if (finalizingPollId === poll.id) {
           setFinalizingPollId(null);
           setSelectedFinalTime('');
@@ -334,6 +370,7 @@ const Admin: React.FC = () => {
   };
 
   const submitFinalize = async (pollId: string) => {
+      if (!isAdmin) return;
       try {
           await DataService.finalizePoll(pollId, selectedFinalTime || null, selectedFinalLoc || null);
           setFinalizingPollId(null);
@@ -390,7 +427,7 @@ const Admin: React.FC = () => {
             onToggleAttendance={handleToggleAttendance}
         />
 
-        {/* --- EDIT STATS MODAL --- */}
+        {/* --- EDIT INFO MODAL (ADMIN ONLY) --- */}
         {editingUserStats && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
                 <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
@@ -401,39 +438,71 @@ const Admin: React.FC = () => {
                         <XCircle size={24} />
                     </button>
                     
-                    <h3 className="text-xl font-bold text-white mb-2">Chỉnh sửa chỉ số</h3>
-                    <p className="text-secondary text-sm mb-4">Cập nhật thủ công cho: <strong className="text-primary">{editingUserStats.nickname}</strong></p>
+                    <h3 className="text-xl font-bold text-white mb-2">Chỉnh sửa thông tin thành viên</h3>
+                    <p className="text-secondary text-sm mb-4">Cập nhật cho: <strong className="text-primary">{editingUserStats.email}</strong></p>
                     
-                    <div className="flex flex-col gap-4">
-                        <div>
-                            <label className="text-xs uppercase font-bold text-secondary mb-1 block">Điều chỉnh số lần tham gia (+/-)</label>
-                            <input 
-                                type="number" 
-                                value={statsForm.attendanceOffset}
-                                onChange={e => setStatsForm({...statsForm, attendanceOffset: Number(e.target.value)})}
-                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-primary outline-none"
-                            />
-                            <p className="text-[10px] text-secondary mt-1">Dùng số âm để giảm.</p>
+                    <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2">
+                        {/* Basic Info */}
+                        <div className="p-3 bg-background/50 rounded-lg border border-border">
+                            <h4 className="text-xs uppercase font-bold text-white mb-3">Thông tin cơ bản</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs text-secondary mb-1 block">Tên hiển thị (Tên thật)</label>
+                                    <input 
+                                        type="text" 
+                                        value={statsForm.name}
+                                        onChange={e => setStatsForm({...statsForm, name: e.target.value})}
+                                        className="w-full bg-surface border border-border rounded p-3 text-white focus:border-primary outline-none"
+                                        placeholder="VD: Nguyễn Văn A"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-secondary mb-1 block">Biệt danh bàn nhậu</label>
+                                    <input 
+                                        type="text" 
+                                        value={statsForm.nickname}
+                                        onChange={e => setStatsForm({...statsForm, nickname: e.target.value})}
+                                        className="w-full bg-surface border border-border rounded p-3 text-white focus:border-primary outline-none"
+                                        placeholder="VD: Tuấn Cồn"
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="text-xs uppercase font-bold text-secondary mb-1 block">Điều chỉnh số lần vote (+/-)</label>
-                            <input 
-                                type="number" 
-                                value={statsForm.voteOffset}
-                                onChange={e => setStatsForm({...statsForm, voteOffset: Number(e.target.value)})}
-                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-primary outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs uppercase font-bold text-secondary mb-1 block flex items-center gap-1"><AlertTriangle size={12}/> Số "Lần bùng" (Giá trị thực)</label>
-                            <input 
-                                type="number" 
-                                min="0"
-                                value={statsForm.flakeCount}
-                                onChange={e => setStatsForm({...statsForm, flakeCount: Number(e.target.value)})}
-                                className="w-full bg-background border border-border rounded p-3 text-white focus:border-red-500 outline-none"
-                            />
-                            <p className="text-[10px] text-secondary mt-1">Nhập tổng số lần bùng kèo.</p>
+
+                        {/* Stats Info */}
+                        <div className="p-3 bg-background/50 rounded-lg border border-border">
+                            <h4 className="text-xs uppercase font-bold text-white mb-3">Chỉ số thành tích</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs text-secondary mb-1 block">Điều chỉnh số lần tham gia (+/-)</label>
+                                    <input 
+                                        type="number" 
+                                        value={statsForm.attendanceOffset}
+                                        onChange={e => setStatsForm({...statsForm, attendanceOffset: Number(e.target.value)})}
+                                        className="w-full bg-surface border border-border rounded p-3 text-white focus:border-primary outline-none"
+                                    />
+                                    <p className="text-[10px] text-secondary mt-1">Dùng số âm để giảm.</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-secondary mb-1 block">Điều chỉnh số lần vote (+/-)</label>
+                                    <input 
+                                        type="number" 
+                                        value={statsForm.voteOffset}
+                                        onChange={e => setStatsForm({...statsForm, voteOffset: Number(e.target.value)})}
+                                        className="w-full bg-surface border border-border rounded p-3 text-white focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-secondary mb-1 block flex items-center gap-1"><AlertTriangle size={12}/> Số "Lần bùng" (Giá trị thực)</label>
+                                    <input 
+                                        type="number" 
+                                        min="0"
+                                        value={statsForm.flakeCount}
+                                        onChange={e => setStatsForm({...statsForm, flakeCount: Number(e.target.value)})}
+                                        className="w-full bg-surface border border-border rounded p-3 text-white focus:border-red-500 outline-none"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <button 
@@ -451,6 +520,7 @@ const Admin: React.FC = () => {
             <div>
                 <h1 className="text-3xl font-black text-white">Pub Master</h1>
                 <p className="text-secondary">Quản lý dân chơi và tạo kèo</p>
+                {!isAdmin && <p className="text-xs text-primary mt-1">(Chế độ xem dành cho Member)</p>}
             </div>
             <div className="flex gap-2 bg-surface p-1 rounded-full border border-border">
                 <button 
@@ -495,7 +565,6 @@ const Admin: React.FC = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                {/* Changed from nickname to name as requested */}
                                                 <div className={`font-bold ${u.isBanned ? 'text-red-400 line-through' : 'text-white'}`}>{u.name}</div>
                                                 <div className="text-xs">{u.email}</div>
                                             </div>
@@ -509,40 +578,45 @@ const Admin: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
-                                         {/* Count actual participation */}
                                         <span className="bg-white/10 px-2 py-1 rounded text-xs text-white">
                                             {polls.filter(p => p.confirmedAttendances?.includes(u.id)).length} kèo
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
-                                            <button 
-                                                onClick={() => handleEditStatsClick(u)}
-                                                className="p-2 rounded-lg transition-all bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
-                                                title="Chỉnh sửa chỉ số"
-                                            >
-                                                <Settings size={16}/>
-                                            </button>
+                                            {/* ADMIN ACTIONS */}
+                                            {isAdmin && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleEditStatsClick(u)}
+                                                        className="p-2 rounded-lg transition-all bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                                                        title="Chỉnh sửa thông tin"
+                                                    >
+                                                        <Settings size={16}/>
+                                                    </button>
 
-                                            <button 
-                                                onClick={() => handleToggleBan(u)}
-                                                disabled={processingUserId === u.id || u.role === 'ADMIN'}
-                                                className={`p-2 rounded-lg transition-all ${u.isBanned ? 'bg-green-600/20 text-green-400 hover:bg-green-600/40' : 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/40'}`}
-                                                title={u.isBanned ? "Mở khóa (Unban)" : "Cấm (Ban)"}
-                                            >
-                                                {u.isBanned ? <Check size={16}/> : <Ban size={16}/>}
-                                            </button>
+                                                    <button 
+                                                        onClick={() => handleToggleBan(u)}
+                                                        disabled={processingUserId === u.id || u.role === 'ADMIN'}
+                                                        className={`p-2 rounded-lg transition-all ${u.isBanned ? 'bg-green-600/20 text-green-400 hover:bg-green-600/40' : 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/40'}`}
+                                                        title={u.isBanned ? "Mở khóa (Unban)" : "Cấm (Ban)"}
+                                                    >
+                                                        {u.isBanned ? <Check size={16}/> : <Ban size={16}/>}
+                                                    </button>
 
-                                            <button 
-                                                onClick={() => handleDeleteUser(u.id)}
-                                                disabled={processingUserId === u.id || u.role === 'ADMIN'}
-                                                className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === u.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
-                                                title="Xóa vĩnh viễn"
-                                            >
-                                                {confirmDeleteId === u.id ? <AlertTriangle size={16}/> : <Trash2 size={16}/>}
-                                                {confirmDeleteId === u.id && <span className="text-xs font-bold">Xác nhận?</span>}
-                                            </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteUser(u.id)}
+                                                        disabled={processingUserId === u.id || u.role === 'ADMIN'}
+                                                        className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === u.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
+                                                        title="Xóa vĩnh viễn"
+                                                    >
+                                                        {confirmDeleteId === u.id ? <AlertTriangle size={16}/> : <Trash2 size={16}/>}
+                                                        {confirmDeleteId === u.id && <span className="text-xs font-bold">Xác nhận?</span>}
+                                                    </button>
+                                                </>
+                                            )}
                                             
+                                            {/* VIEW DETAILS (AVAILABLE FOR ALL) */}
                                             <button 
                                                 onClick={() => setSelectedUser(u)}
                                                 className="p-2 hover:text-primary transition-colors text-secondary"
@@ -560,127 +634,130 @@ const Admin: React.FC = () => {
             </div>
         )}
 
-        {/* ... POLLS TAB CONTENT SAME AS BEFORE ... */}
+        {/* ... POLLS TAB ... */}
         {activeTab === 'POLLS' && (
-            <div className="grid lg:grid-cols-2 gap-8">
-                {/* Create/Edit Poll Form */}
-                <div className="bg-surface p-8 rounded-2xl border border-border h-fit">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            {editingPollId ? <Edit2 className="text-primary"/> : <Plus className="text-primary"/>} 
-                            {editingPollId ? 'Chỉnh sửa kèo' : 'Tạo kèo mới'}
-                        </h2>
-                        {editingPollId && (
-                            <button onClick={handleCancelEdit} className="text-xs text-secondary hover:text-white underline">Hủy bỏ</button>
-                        )}
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                        <div className="flex flex-col gap-4">
-                            <div>
-                                <label className="text-sm font-bold text-white block mb-2">Tiêu đề</label>
-                                <input value={pollTitle} onChange={e => setPollTitle(e.target.value)} required className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none" placeholder="Hôm nay uống gì?" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-white block mb-2">Mô tả</label>
-                                <textarea value={pollDesc} onChange={e => setPollDesc(e.target.value)} className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none min-h-[80px]" placeholder="Nhập mô tả cho anh em..." />
-                            </div>
-
-                            {/* Settings Row */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-bold text-white block mb-2 flex items-center gap-1"><Calendar size={14}/> Deadline Vote (Date)</label>
-                                    <input 
-                                        type="date" 
-                                        value={deadlineDate}
-                                        onChange={e => setDeadlineDate(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-lg p-2 text-white text-sm focus:border-primary outline-none cursor-pointer" 
-                                    />
-                                    <p className="text-[10px] text-secondary mt-1 italic">Mặc định chốt lúc 16:00</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-bold text-white block mb-2 flex items-center gap-1"><Calendar size={14}/> Ngày báo kết quả</label>
-                                    <input 
-                                        type="date" 
-                                        value={resultDate}
-                                        onChange={e => setResultDate(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-lg p-2 text-white text-sm focus:border-primary outline-none cursor-pointer" 
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Switch */}
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border cursor-pointer" onClick={() => setAllowMultiple(!allowMultiple)}>
-                                <div className={`w-10 h-6 rounded-full p-1 transition-colors ${allowMultiple ? 'bg-primary' : 'bg-surface border border-secondary'}`}>
-                                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${allowMultiple ? 'translate-x-4' : ''}`}></div>
-                                </div>
-                                <div>
-                                    <div className="text-sm font-bold text-white">Cho phép chọn nhiều</div>
-                                    <div className="text-xs text-secondary">Người dùng có thể vote nhiều quán/ngày cùng lúc</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Time Options (Date) */}
-                        <div>
-                            <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2"><Calendar size={16}/> Chọn ngày chiến (Date Options)</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {timeOptions.map((opt, idx) => (
-                                    <div key={idx} className="bg-background p-2 rounded-lg border border-border flex gap-2 items-center relative">
-                                         <input 
-                                            type="date"
-                                            value={opt.text}
-                                            onChange={e => handleTimeChange(idx, e.target.value)}
-                                            className="flex-1 bg-transparent text-white text-sm font-bold outline-none text-center cursor-pointer"
-                                         />
-                                         {timeOptions.length > 1 && (
-                                            <button type="button" onClick={() => removeTime(idx)} className="text-secondary hover:text-red-500"><Trash2 size={14}/></button>
-                                         )}
-                                    </div>
-                                ))}
-                                <button type="button" onClick={addTime} className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white rounded-lg p-2 flex items-center justify-center">
-                                    <Plus size={16}/>
-                                </button>
-                            </div>
+            <div className={`grid gap-8 ${isAdmin ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+                {/* Create/Edit Poll Form (Only Admin) */}
+                {isAdmin && (
+                    <div className="bg-surface p-8 rounded-2xl border border-border h-fit">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                {editingPollId ? <Edit2 className="text-primary"/> : <Plus className="text-primary"/>} 
+                                {editingPollId ? 'Chỉnh sửa kèo' : 'Tạo kèo mới'}
+                            </h2>
+                            {editingPollId && (
+                                <button onClick={handleCancelEdit} className="text-xs text-secondary hover:text-white underline">Hủy bỏ</button>
+                            )}
                         </div>
 
-                        {/* Location Options */}
-                        <div>
-                            <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2"><MapPin size={16}/> Các địa điểm (Location Options)</label>
-                            <div className="space-y-3">
-                                {pollOptions.map((opt, idx) => (
-                                    <div key={idx} className="bg-background p-3 rounded-lg border border-border flex flex-col gap-2 relative group">
-                                        <div className="flex gap-2 items-center">
-                                            <span className="text-secondary text-sm font-mono w-4">{idx + 1}.</span>
-                                            <input 
-                                                value={opt.text} 
-                                                onChange={e => handleOptionChange(idx, 'text', e.target.value)} 
-                                                className="flex-1 bg-transparent border-b border-border focus:border-primary text-white font-bold outline-none pb-1"
-                                                placeholder={`Địa điểm ${idx + 1}`}
-                                            />
-                                            {pollOptions.length > 2 && (
-                                                <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
-                                            )}
-                                        </div>
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                             {/* ... Form Inputs (Same as before) ... */}
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <label className="text-sm font-bold text-white block mb-2">Tiêu đề</label>
+                                    <input value={pollTitle} onChange={e => setPollTitle(e.target.value)} required className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none" placeholder="Hôm nay uống gì?" />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-bold text-white block mb-2">Mô tả</label>
+                                    <textarea value={pollDesc} onChange={e => setPollDesc(e.target.value)} className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none min-h-[80px]" placeholder="Nhập mô tả cho anh em..." />
+                                </div>
+
+                                {/* Settings Row */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-bold text-white block mb-2 flex items-center gap-1"><Calendar size={14}/> Deadline Vote (Date)</label>
                                         <input 
-                                            value={opt.description}
-                                            onChange={e => handleOptionChange(idx, 'description', e.target.value)}
-                                            className="w-full bg-transparent text-xs text-secondary outline-none pl-6"
-                                            placeholder="Địa chỉ, link map, ghi chú..."
+                                            type="date" 
+                                            value={deadlineDate}
+                                            onChange={e => setDeadlineDate(e.target.value)}
+                                            className="w-full bg-background border border-border rounded-lg p-2 text-white text-sm focus:border-primary outline-none cursor-pointer" 
+                                        />
+                                        <p className="text-[10px] text-secondary mt-1 italic">Mặc định chốt lúc 16:00</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-bold text-white block mb-2 flex items-center gap-1"><Calendar size={14}/> Ngày báo kết quả</label>
+                                        <input 
+                                            type="date" 
+                                            value={resultDate}
+                                            onChange={e => setResultDate(e.target.value)}
+                                            className="w-full bg-background border border-border rounded-lg p-2 text-white text-sm focus:border-primary outline-none cursor-pointer" 
                                         />
                                     </div>
-                                ))}
-                                <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2">
-                                    <Plus size={16} /> Thêm địa điểm
-                                </button>
-                            </div>
-                        </div>
+                                </div>
 
-                        <button type="submit" className="bg-primary hover:bg-primary-hover text-background font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95">
-                            {editingPollId ? 'Cập Nhật Kèo' : 'Lên Bia! 🍻'}
-                        </button>
-                    </form>
-                </div>
+                                {/* Switch */}
+                                <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border cursor-pointer" onClick={() => setAllowMultiple(!allowMultiple)}>
+                                    <div className={`w-10 h-6 rounded-full p-1 transition-colors ${allowMultiple ? 'bg-primary' : 'bg-surface border border-secondary'}`}>
+                                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${allowMultiple ? 'translate-x-4' : ''}`}></div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-white">Cho phép chọn nhiều</div>
+                                        <div className="text-xs text-secondary">Người dùng có thể vote nhiều quán/ngày cùng lúc</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Time Options (Date) */}
+                            <div>
+                                <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2"><Calendar size={16}/> Chọn ngày chiến (Date Options)</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {timeOptions.map((opt, idx) => (
+                                        <div key={idx} className="bg-background p-2 rounded-lg border border-border flex gap-2 items-center relative">
+                                             <input 
+                                                type="date"
+                                                value={opt.text}
+                                                onChange={e => handleTimeChange(idx, e.target.value)}
+                                                className="flex-1 bg-transparent text-white text-sm font-bold outline-none text-center cursor-pointer"
+                                             />
+                                             {timeOptions.length > 1 && (
+                                                <button type="button" onClick={() => removeTime(idx)} className="text-secondary hover:text-red-500"><Trash2 size={14}/></button>
+                                             )}
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={addTime} className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white rounded-lg p-2 flex items-center justify-center">
+                                        <Plus size={16}/>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Location Options */}
+                            <div>
+                                <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2"><MapPin size={16}/> Các địa điểm (Location Options)</label>
+                                <div className="space-y-3">
+                                    {pollOptions.map((opt, idx) => (
+                                        <div key={idx} className="bg-background p-3 rounded-lg border border-border flex flex-col gap-2 relative group">
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-secondary text-sm font-mono w-4">{idx + 1}.</span>
+                                                <input 
+                                                    value={opt.text} 
+                                                    onChange={e => handleOptionChange(idx, 'text', e.target.value)} 
+                                                    className="flex-1 bg-transparent border-b border-border focus:border-primary text-white font-bold outline-none pb-1"
+                                                    placeholder={`Địa điểm ${idx + 1}`}
+                                                />
+                                                {pollOptions.length > 2 && (
+                                                    <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                                                )}
+                                            </div>
+                                            <input 
+                                                value={opt.description}
+                                                onChange={e => handleOptionChange(idx, 'description', e.target.value)}
+                                                className="w-full bg-transparent text-xs text-secondary outline-none pl-6"
+                                                placeholder="Địa chỉ, link map, ghi chú..."
+                                            />
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2">
+                                        <Plus size={16} /> Thêm địa điểm
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="bg-primary hover:bg-primary-hover text-background font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95">
+                                {editingPollId ? 'Cập Nhật Kèo' : 'Lên Bia! 🍻'}
+                            </button>
+                        </form>
+                    </div>
+                )}
 
                 {/* List Polls */}
                 <div className="space-y-4">
@@ -690,7 +767,7 @@ const Admin: React.FC = () => {
                         const isFinalized = !!poll.finalizedOptionId || !!poll.finalizedTimeId;
 
                         return (
-                            <div key={poll.id} className={`bg-surface border rounded-xl p-5 relative transition-all ${isExpired || isFinalized ? 'border-border opacity-80' : 'border-primary shadow-md'}`}>
+                            <div key={poll.id} className={`bg-surface border rounded-xl p-5 relative transition-all ${isExpired || isFinalized ? 'border-border opacity-80' : 'border-primary shadow-md'} ${poll.isHidden ? 'opacity-50 grayscale' : ''}`}>
                                 {isFinalized && (
                                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
                                         ĐÃ CHỐT
@@ -699,6 +776,11 @@ const Admin: React.FC = () => {
                                 {isExpired && !isFinalized && (
                                     <div className="absolute top-0 right-0 bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg border border-red-500/30">
                                         HẾT HẠN
+                                    </div>
+                                )}
+                                {poll.isHidden && (
+                                    <div className="absolute top-8 right-0 bg-gray-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-l-lg flex items-center gap-1">
+                                        <EyeOff size={10} /> ĐÃ ẨN
                                     </div>
                                 )}
                                 
@@ -714,98 +796,112 @@ const Admin: React.FC = () => {
                                     </div>
                                 </div>
                                 
-                                {/* Quick Actions */}
-                                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-                                    <button 
-                                        onClick={() => handleEditClick(poll)}
-                                        className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold"
-                                        title="Chỉnh sửa (Gia hạn/Sửa lỗi)"
-                                    >
-                                        <Edit2 size={14}/> Sửa
-                                    </button>
-
-                                    {/* Finalize Button Toggle */}
-                                    <div className="relative group">
+                                {/* Quick Actions - Only for Admin */}
+                                {isAdmin && (
+                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
                                         <button 
-                                            onClick={() => handleFinalizeClick(poll)}
-                                            className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
-                                                isFinalized 
-                                                ? 'bg-yellow-500 text-black hover:bg-yellow-400' 
-                                                : 'bg-green-600 text-white hover:bg-green-500'
-                                            } ${finalizingPollId === poll.id ? 'ring-2 ring-white' : ''}`}
+                                            onClick={() => handleEditClick(poll)}
+                                            className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold"
+                                            title="Chỉnh sửa (Gia hạn/Sửa lỗi)"
                                         >
-                                            <Gavel size={14}/> {isFinalized ? 'Sửa Kết Quả' : 'Chốt Kèo'}
+                                            <Edit2 size={14}/> Sửa
                                         </button>
-                                        
-                                        {/* Dropdown for Finalize */}
-                                        {finalizingPollId === poll.id && (
-                                            <div className="absolute left-0 bottom-full mb-2 bg-background border border-border rounded-xl p-4 shadow-2xl w-64 z-20 animate-in zoom-in-95">
-                                                <h4 className="text-white font-bold text-sm mb-3">Chọn kết quả cuối cùng</h4>
-                                                
-                                                <label className="block mb-2">
-                                                    <span className="text-xs text-secondary block mb-1">Ngày chốt:</span>
-                                                    <select 
-                                                        className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
-                                                        value={selectedFinalTime}
-                                                        onChange={(e) => setSelectedFinalTime(e.target.value)}
-                                                    >
-                                                        <option value="">-- Chưa chốt ngày --</option>
-                                                        {(poll.timeOptions || []).map(t => (
-                                                            <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} vote)</option>
-                                                        ))}
-                                                    </select>
-                                                </label>
 
-                                                <label className="block mb-3">
-                                                    <span className="text-xs text-secondary block mb-1">Địa điểm chốt:</span>
-                                                    <select 
-                                                        className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
-                                                        value={selectedFinalLoc}
-                                                        onChange={(e) => setSelectedFinalLoc(e.target.value)}
-                                                    >
-                                                        <option value="">-- Chưa chốt quán --</option>
-                                                        {poll.options.map(o => (
-                                                            <option key={o.id} value={o.id}>{o.text} ({o.votes.length} vote)</option>
-                                                        ))}
-                                                    </select>
-                                                </label>
+                                        {/* Finalize Button Toggle */}
+                                        <div className="relative group">
+                                            <button 
+                                                onClick={() => handleFinalizeClick(poll)}
+                                                className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
+                                                    isFinalized 
+                                                    ? 'bg-yellow-500 text-black hover:bg-yellow-400' 
+                                                    : 'bg-green-600 text-white hover:bg-green-500'
+                                                } ${finalizingPollId === poll.id ? 'ring-2 ring-white' : ''}`}
+                                            >
+                                                <Gavel size={14}/> {isFinalized ? 'Sửa Kết Quả' : 'Chốt Kèo'}
+                                            </button>
+                                            
+                                            {/* Dropdown for Finalize */}
+                                            {finalizingPollId === poll.id && (
+                                                <div className="absolute left-0 bottom-full mb-2 bg-background border border-border rounded-xl p-4 shadow-2xl w-64 z-20 animate-in zoom-in-95">
+                                                    <h4 className="text-white font-bold text-sm mb-3">Chọn kết quả cuối cùng</h4>
+                                                    
+                                                    <label className="block mb-2">
+                                                        <span className="text-xs text-secondary block mb-1">Ngày chốt:</span>
+                                                        <select 
+                                                            className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
+                                                            value={selectedFinalTime}
+                                                            onChange={(e) => setSelectedFinalTime(e.target.value)}
+                                                        >
+                                                            <option value="">-- Chưa chốt ngày --</option>
+                                                            {(poll.timeOptions || []).map(t => (
+                                                                <option key={t.id} value={t.id}>{new Date(t.text).toLocaleDateString('vi-VN')} ({t.votes.length} vote)</option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
 
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => submitFinalize(poll.id)} className="flex-1 bg-primary text-background text-xs font-bold py-2 rounded hover:brightness-110">
-                                                        Xác nhận
-                                                    </button>
-                                                    <button onClick={() => setFinalizingPollId(null)} className="bg-surface border border-border text-xs py-2 px-3 rounded hover:bg-white/10">
-                                                        Huỷ
-                                                    </button>
+                                                    <label className="block mb-3">
+                                                        <span className="text-xs text-secondary block mb-1">Địa điểm chốt:</span>
+                                                        <select 
+                                                            className="w-full bg-surface border border-border rounded p-1 text-xs text-white"
+                                                            value={selectedFinalLoc}
+                                                            onChange={(e) => setSelectedFinalLoc(e.target.value)}
+                                                        >
+                                                            <option value="">-- Chưa chốt quán --</option>
+                                                            {poll.options.map(o => (
+                                                                <option key={o.id} value={o.id}>{o.text} ({o.votes.length} vote)</option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => submitFinalize(poll.id)} className="flex-1 bg-primary text-background text-xs font-bold py-2 rounded hover:brightness-110">
+                                                            Xác nhận
+                                                        </button>
+                                                        <button onClick={() => setFinalizingPollId(null)} className="bg-surface border border-border text-xs py-2 px-3 rounded hover:bg-white/10">
+                                                            Huỷ
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
+                                        </div>
+
+                                        {/* Hide/Show Poll (Only when finalized) */}
+                                        {isFinalized && (
+                                            <button 
+                                                onClick={() => handleToggleHidePoll(poll)}
+                                                className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${poll.isHidden ? 'bg-gray-600 text-white' : 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'}`}
+                                                title={poll.isHidden ? "Hiện lại trên Dashboard" : "Ẩn khỏi Dashboard"}
+                                            >
+                                                {poll.isHidden ? <Eye size={14}/> : <EyeOff size={14}/>}
+                                                {poll.isHidden ? 'Hiện' : 'Ẩn'}
+                                            </button>
                                         )}
-                                    </div>
 
-                                    {/* Mở lại button - Chỉ hiện khi đã chốt thủ công */}
-                                    {isFinalized && (
+                                        {/* Reopen Button */}
+                                        {isFinalized && !poll.isHidden && (
+                                            <button 
+                                                onClick={() => handleReopenPoll(poll)}
+                                                className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
+                                                    confirmReopenId === poll.id 
+                                                    ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                                                    : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
+                                                }`}
+                                                title="Hủy trạng thái đã chốt (Giữ nguyên deadline)"
+                                            >
+                                                <RefreshCw size={14} className={confirmReopenId === poll.id ? "animate-spin" : ""}/> 
+                                                {confirmReopenId === poll.id ? 'Xác nhận?' : 'Mở lại'}
+                                            </button>
+                                        )}
+
                                         <button 
-                                            onClick={() => handleReopenPoll(poll)}
-                                            className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${
-                                                confirmReopenId === poll.id 
-                                                ? 'bg-orange-600 text-white hover:bg-orange-700' 
-                                                : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
-                                            }`}
-                                            title="Hủy trạng thái đã chốt (Giữ nguyên deadline)"
+                                            onClick={() => handleDeletePoll(poll.id)}
+                                            className={`ml-auto p-2 rounded hover:bg-red-500/10 text-secondary hover:text-red-400 transition-all ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : ''}`}
+                                            title="Xóa kèo"
                                         >
-                                            <RefreshCw size={14} className={confirmReopenId === poll.id ? "animate-spin" : ""}/> 
-                                            {confirmReopenId === poll.id ? 'Xác nhận?' : 'Mở lại'}
+                                            {confirmDeleteId === poll.id ? <span className="text-xs font-bold">Xác nhận xóa?</span> : <Trash2 size={16}/>}
                                         </button>
-                                    )}
-
-                                    <button 
-                                        onClick={() => handleDeletePoll(poll.id)}
-                                        className={`ml-auto p-2 rounded hover:bg-red-500/10 text-secondary hover:text-red-400 transition-all ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : ''}`}
-                                        title="Xóa kèo"
-                                    >
-                                        {confirmDeleteId === poll.id ? <span className="text-xs font-bold">Xác nhận xóa?</span> : <Trash2 size={16}/>}
-                                    </button>
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )
                     })}

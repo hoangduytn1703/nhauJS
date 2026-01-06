@@ -236,7 +236,6 @@ export const DataService = {
         const pollDoc = await transaction.get(pollRef);
         const userDoc = await transaction.get(userRef);
         if (!pollDoc.exists() || !userDoc.exists()) throw "Not found";
-        
         const pollData = pollDoc.data() as Poll;
         const userData = userDoc.data() as User;
         

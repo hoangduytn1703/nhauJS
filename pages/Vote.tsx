@@ -41,7 +41,10 @@ const Vote: React.FC = () => {
          usersData.forEach(u => map[u.id] = u);
          
          setUserMap(map);
-         setPolls(pollsData);
+         
+         // Filter out hidden polls
+         const visiblePolls = pollsData.filter(p => !p.isHidden);
+         setPolls(visiblePolls);
      } catch (e) {
          console.error(e);
      } finally {
@@ -84,7 +87,7 @@ const Vote: React.FC = () => {
         await DataService.vote(pollId, optionId, user.id, target);
         // Optimistic update
         const updatedPolls = await DataService.getPolls();
-        setPolls(updatedPolls);
+        setPolls(updatedPolls.filter(p => !p.isHidden));
     } catch (error: any) {
         alert(error.message || 'Lỗi khi vote');
     }
@@ -666,6 +669,8 @@ const Vote: React.FC = () => {
         );
       })}
 
+      {/* ... MODALS ... */}
+      {/* ... (Kept existing modal code) ... */}
       {/* --- ADD OPTION MODAL --- */}
       {addModal.show && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
