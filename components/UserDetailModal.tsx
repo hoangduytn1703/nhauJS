@@ -60,7 +60,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                 </span>
                                 {flakeCount > 0 && (
                                     <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-bold border border-red-500/30 flex items-center gap-1">
-                                        <AlertTriangle size={12}/> {flakeCount} Vết nhơ
+                                        <AlertTriangle size={12}/> {flakeCount} Số lần bùng
                                     </span>
                                 )}
                             </div>

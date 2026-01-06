@@ -425,7 +425,7 @@ const Admin: React.FC = () => {
                             />
                         </div>
                         <div>
-                            <label className="text-xs uppercase font-bold text-secondary mb-1 block flex items-center gap-1"><AlertTriangle size={12}/> Số "Vết Nhơ" (Giá trị thực)</label>
+                            <label className="text-xs uppercase font-bold text-secondary mb-1 block flex items-center gap-1"><AlertTriangle size={12}/> Số "Lần bùng" (Giá trị thực)</label>
                             <input 
                                 type="number" 
                                 min="0"

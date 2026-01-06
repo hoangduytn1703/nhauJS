@@ -261,7 +261,7 @@ const Profile: React.FC = () => {
                                     
                                     {(user.flakeCount || 0) > 0 && (
                                         <div className="flex items-center gap-1 mt-1 text-[9px] text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded w-fit border border-red-900/30">
-                                            <AlertTriangle size={8} /> {user.flakeCount} Vết nhơ
+                                            <AlertTriangle size={8} /> {user.flakeCount} lần bùng
                                         </div>
                                     )}
                                 </div>

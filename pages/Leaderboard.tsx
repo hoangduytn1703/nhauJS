@@ -147,7 +147,7 @@ const Leaderboard: React.FC = () => {
                         <th className="px-6 py-4">Dân chơi</th>
                         <th className="px-6 py-4 text-center">Đã chi (k)</th>
                         <th className="px-6 py-4 text-center">Tham gia</th>
-                        <th className="px-6 py-4 text-center text-red-400">Vết nhơ</th>
+                        <th className="px-6 py-4 text-center text-red-400">Số lần bùng</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -184,7 +184,7 @@ const Leaderboard: React.FC = () => {
         
         <div className="text-center text-xs text-secondary italic mt-4 max-w-lg mx-auto bg-surface/50 p-3 rounded-lg border border-border">
             * Logic xếp hạng: Tổng tiền đã chi (Ưu tiên 1) <br/>
-            → Điểm chuyên cần (Tham gia - 0.5 x Vết nhơ) (Ưu tiên 2) <br/>
+            → Điểm chuyên cần (Tham gia - 0.5 x lần bùng kèo) (Ưu tiên 2) <br/>
             → Số lần Vote đầy đủ (Ưu tiên 3)
         </div>
     </div>

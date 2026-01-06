@@ -245,7 +245,7 @@ export const DataService = {
 
         // 1. Logic: Nếu JOIN -> DECLINE (Bùng kèo)
         if (currentStatus === 'JOIN' && status === 'DECLINE') {
-            // Check idempotency: Chỉ tính 1 lần vết nhơ cho mỗi poll
+            // Check idempotency: Chỉ tính 1 lần Bùng kèo cho mỗi poll
             const flakedPolls = userData.flakedPolls || [];
             if (!flakedPolls.includes(pollId)) {
                 transaction.update(userRef, { 
@@ -255,8 +255,8 @@ export const DataService = {
             }
         }
         
-        // Note: Nếu DECLINE -> JOIN: Chưa xóa vết nhơ ngay.
-        // Quy tắc: "vote ngày và quán đầy đủ thỉ... xóa đi vết nhơ".
+        // Note: Nếu DECLINE -> JOIN: Chưa xóa Bùng kèo ngay.
+        // Quy tắc: "vote ngày và quán đầy đủ thỉ... xóa đi Bùng kèo".
         // Việc này sẽ được check trong hàm `vote`.
 
         const participantData: ParticipantData = {
@@ -289,7 +289,7 @@ export const DataService = {
     });
   },
 
-  // --- LOGIC VOTE & REDEMPTION (Xóa vết nhơ) ---
+  // --- LOGIC VOTE & REDEMPTION (Xóa Bùng kèo) ---
   vote: async (pollId: string, optionId: string, userId: string, target: 'options' | 'timeOptions'): Promise<void> => {
     const pollRef = doc(db, "polls", pollId);
     const userRef = doc(db, "users", userId);
@@ -339,7 +339,7 @@ export const DataService = {
       transaction.update(pollRef, updatePayload);
 
 
-      // --- 2. Check Redemption (Xóa vết nhơ) ---
+      // --- 2. Check Redemption (Xóa Bùng kèo) ---
       // Requirement: User previously flaked THIS poll + Now Status JOIN + Voted Full (Time + Loc) + Within Deadline.
       const flakedPolls = userData.flakedPolls || [];
       const hasFlakedThisPoll = flakedPolls.includes(pollId);
