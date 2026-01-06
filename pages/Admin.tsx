@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/mockService';
 import { User, Poll, PollOption, UserRole } from '../types';
 import { useAuth } from '../App';
-import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff } from 'lucide-react';
+import { Plus, Trash2, LayoutList, Edit2, Calendar, MapPin, CheckSquare, Square, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote } from 'lucide-react';
 import { UserDetailModal } from '../components/UserDetailModal';
 
 // Helper to format date for input type="date"
@@ -30,9 +30,10 @@ const Admin: React.FC = () => {
   const [resultDate, setResultDate] = useState<string>(''); // YYYY-MM-DD
   
   // Location Options State
-  const [pollOptions, setPollOptions] = useState<{id?: string, text: string, description: string, votes?: string[]}[]>([
-      { text: '', description: '' }, 
-      { text: '', description: '' }
+  // Split description into description (address) and notes
+  const [pollOptions, setPollOptions] = useState<{id?: string, text: string, description: string, notes: string, votes?: string[]}[]>([
+      { text: '', description: '', notes: '' }, 
+      { text: '', description: '', notes: '' }
   ]);
   
   // Time Options State (Now Date Options)
@@ -130,7 +131,8 @@ const Admin: React.FC = () => {
       const formOptions = poll.options.map(o => ({
           id: o.id,
           text: o.text,
-          description: o.description || '',
+          description: o.description || '', // Address/Map Link
+          notes: o.notes || '', // Notes
           votes: o.votes
       }));
       setPollOptions(formOptions);
@@ -166,7 +168,7 @@ const Admin: React.FC = () => {
       setAllowMultiple(false);
       setDeadlineDate('');
       setResultDate('');
-      setPollOptions([{ text: '', description: '' }, { text: '', description: '' }]);
+      setPollOptions([{ text: '', description: '', notes: '' }, { text: '', description: '', notes: '' }]);
       setTimeOptions([{ text: '' }, { text: '' }]);
       setSelectedFinalTime('');
       setSelectedFinalLoc('');
@@ -208,6 +210,7 @@ const Admin: React.FC = () => {
                 id: opt.id || `opt_loc_${Date.now()}_${idx}`,
                 text: opt.text,
                 description: opt.description,
+                notes: opt.notes,
                 votes: opt.votes || [],
                 image: `https://picsum.photos/400/200?random=${idx}`
             }));
@@ -394,12 +397,12 @@ const Admin: React.FC = () => {
   }
 
   // Location handlers
-  const handleOptionChange = (idx: number, field: 'text' | 'description', val: string) => {
+  const handleOptionChange = (idx: number, field: 'text' | 'description' | 'notes', val: string) => {
       const newOpts = [...pollOptions];
       newOpts[idx] = { ...newOpts[idx], [field]: val };
       setPollOptions(newOpts);
   };
-  const addOption = () => setPollOptions([...pollOptions, { text: '', description: '' }]);
+  const addOption = () => setPollOptions([...pollOptions, { text: '', description: '', notes: '' }]);
   const removeOption = (idx: number) => {
       if (pollOptions.length <= 2) return;
       setPollOptions(pollOptions.filter((_, i) => i !== idx));
@@ -732,18 +735,34 @@ const Admin: React.FC = () => {
                                                     value={opt.text} 
                                                     onChange={e => handleOptionChange(idx, 'text', e.target.value)} 
                                                     className="flex-1 bg-transparent border-b border-border focus:border-primary text-white font-bold outline-none pb-1"
-                                                    placeholder={`Địa điểm ${idx + 1}`}
+                                                    placeholder={`Tên quán (VD: Bia Hải Xồm)`}
                                                 />
                                                 {pollOptions.length > 2 && (
                                                     <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
                                                 )}
                                             </div>
-                                            <input 
-                                                value={opt.description}
-                                                onChange={e => handleOptionChange(idx, 'description', e.target.value)}
-                                                className="w-full bg-transparent text-xs text-secondary outline-none pl-6"
-                                                placeholder="Địa chỉ, link map, ghi chú..."
-                                            />
+                                            
+                                            {/* Address / Map Link */}
+                                            <div className="flex items-center gap-2 pl-6">
+                                                <MapPin size={14} className="text-secondary shrink-0"/>
+                                                <input 
+                                                    value={opt.description}
+                                                    onChange={e => handleOptionChange(idx, 'description', e.target.value)}
+                                                    className="w-full bg-transparent text-xs text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
+                                                    placeholder="Địa chỉ hoặc Link Google Map..."
+                                                />
+                                            </div>
+
+                                            {/* Notes */}
+                                            <div className="flex items-center gap-2 pl-6">
+                                                <StickyNote size={14} className="text-secondary shrink-0"/>
+                                                <input 
+                                                    value={opt.notes}
+                                                    onChange={e => handleOptionChange(idx, 'notes', e.target.value)}
+                                                    className="w-full bg-transparent text-xs text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
+                                                    placeholder="Ghi chú (Pass wifi, chỗ gửi xe...)"
+                                                />
+                                            </div>
                                         </div>
                                     ))}
                                     <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2">

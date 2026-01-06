@@ -155,7 +155,7 @@ export const DataService = {
     } as Poll));
   },
 
-  createPoll: async (pollData: Omit<Poll, 'id' | 'createdAt' | 'options' | 'timeOptions'>, options: {text: string, description: string}[], timeOptions: string[]): Promise<Poll> => {
+  createPoll: async (pollData: Omit<Poll, 'id' | 'createdAt' | 'options' | 'timeOptions'>, options: {text: string, description: string, notes?: string}[], timeOptions: string[]): Promise<Poll> => {
      const newPollData = {
        ...pollData,
        createdAt: Date.now(),
@@ -167,6 +167,7 @@ export const DataService = {
          id: `opt_loc_${Date.now()}_${index}`,
          text: opt.text,
          description: opt.description,
+         notes: opt.notes || '',
          votes: [],
          image: `https://picsum.photos/400/200?random=${Math.random()}`
        })),
@@ -203,13 +204,14 @@ export const DataService = {
       });
   },
   
-  addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string }, userId: string): Promise<void> => {
+  addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string, notes?: string }, userId: string): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
       
       const newOption: PollOption = {
           id: `opt_${type === 'options' ? 'loc' : 'time'}_${Date.now()}_user`,
           text: data.text,
           description: data.description || '',
+          notes: data.notes || '',
           votes: [userId], // Auto vote for creator
           image: type === 'options' ? `https://picsum.photos/400/200?random=${Date.now()}` : undefined
       };
@@ -217,9 +219,6 @@ export const DataService = {
       await updateDoc(pollRef, {
           [type]: arrayUnion(newOption)
       });
-      
-      // Auto vote logic also needs to trigger redemption check? 
-      // Simplified: Add option doesn't usually remove flake automatically, explicit vote does.
   },
 
   updateBill: async (pollId: string, bill: BillInfo): Promise<void> => {

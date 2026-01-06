@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { DataService } from '../services/mockService';
 import { Poll, User, PollOption } from '../types';
 import { useAuth } from '../App';
-import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon } from 'lucide-react';
+import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon, StickyNote, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Vote: React.FC = () => {
@@ -25,10 +25,13 @@ const Vote: React.FC = () => {
   const [addModal, setAddModal] = useState<{show: boolean, pollId: string, type: 'options' | 'timeOptions'}>({show: false, pollId: '', type: 'options'});
   const [newOptionText, setNewOptionText] = useState('');
   const [newOptionDesc, setNewOptionDesc] = useState('');
+  const [newOptionNotes, setNewOptionNotes] = useState(''); // New field for notes
   const [adding, setAdding] = useState(false);
 
   // View Voters Modal State
   const [viewVotersModal, setViewVotersModal] = useState<{show: boolean, title: string, voterIds: string[]}>({show: false, title: '', voterIds: []});
+
+  const isAdmin = user?.role === 'ADMIN';
 
   const fetchData = async () => {
      try {
@@ -58,6 +61,8 @@ const Vote: React.FC = () => {
 
   const handleParticipation = async (pollId: string, status: 'JOIN' | 'DECLINE', reason: string = '') => {
       if(!user) return;
+      if (isAdmin) return alert("Admin chỉ được xem, không tham gia vote!");
+      
       try {
           await DataService.submitParticipation(pollId, user.id, status, reason);
           setShowDeclineInputFor(null);
@@ -71,6 +76,7 @@ const Vote: React.FC = () => {
 
   const handleVote = async (pollId: string, optionId: string, target: 'options' | 'timeOptions') => {
     if(!user) return;
+    if (isAdmin) return alert("Admin chỉ được xem, không tham gia vote!");
     
     // Check constraint: Must vote time before location
     const poll = polls.find(p => p.id === pollId);
@@ -102,20 +108,24 @@ const Vote: React.FC = () => {
 
   // --- Add Option Logic ---
   const openAddModal = (pollId: string, type: 'options' | 'timeOptions') => {
+      if (isAdmin) return;
       setAddModal({ show: true, pollId, type });
       setNewOptionText('');
       setNewOptionDesc('');
+      setNewOptionNotes('');
   };
 
   const submitNewOption = async () => {
       if (!user) return;
+      if (isAdmin) return;
       if (!newOptionText.trim()) return alert("Vui lòng nhập thông tin");
 
       setAdding(true);
       try {
           await DataService.addPollOption(addModal.pollId, addModal.type, {
               text: newOptionText,
-              description: newOptionDesc
+              description: newOptionDesc,
+              notes: newOptionNotes
           }, user.id);
           
           setAddModal({ ...addModal, show: false });
@@ -171,6 +181,12 @@ const Vote: React.FC = () => {
           favoriteDrinks: []
       } as User;
   };
+
+  // Helper to detect if string is a URL
+  const isLink = (str?: string) => {
+      if (!str) return false;
+      return str.startsWith('http') || str.startsWith('www');
+  }
 
   if (loading) return <div className="text-center py-20 text-secondary">Đang tìm quán...</div>;
 
@@ -311,8 +327,8 @@ const Vote: React.FC = () => {
                    )}
                 </div>
 
-                {/* --- Logic 1: Chưa chọn trạng thái tham gia --- */}
-                {!participationStatus && !ended && (
+                {/* --- Logic 1: Chưa chọn trạng thái tham gia & KHÔNG PHẢI ADMIN --- */}
+                {!participationStatus && !ended && !isAdmin && (
                     <div className="bg-surface/50 border border-border p-6 rounded-2xl flex flex-col items-center justify-center gap-4 py-12">
                         <h4 className="text-xl font-bold text-white">Bạn có tham gia kèo này không?</h4>
                         <p className="text-secondary text-sm -mt-2">Xác nhận trước khi chọn quán nhé!</p>
@@ -360,6 +376,17 @@ const Vote: React.FC = () => {
                     </div>
                 )}
 
+                {/* --- Logic 1.5: Admin Banner --- */}
+                {isAdmin && !ended && (
+                    <div className="bg-surface/30 border border-blue-500/30 p-4 rounded-xl flex items-center gap-3">
+                        <ShieldAlert size={24} className="text-blue-400" />
+                        <div>
+                            <h4 className="font-bold text-white text-sm">Chế độ Admin</h4>
+                            <p className="text-xs text-secondary">Bạn đang xem trực tiếp kết quả. Admin không có quyền vote hoặc tham gia.</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* --- Logic 2: Đã chọn KHÔNG tham gia --- */}
                 {participationStatus === 'DECLINE' && (
                     <div className="bg-surface/30 border border-dashed border-border p-6 rounded-2xl flex flex-col items-center justify-center gap-2 py-8 opacity-70">
@@ -379,11 +406,11 @@ const Vote: React.FC = () => {
                     </div>
                 )}
 
-               {/* --- Logic 3: Đã chọn THAM GIA hoặc đã kết thúc --- */}
-               {(participationStatus === 'JOIN' || (ended && participationStatus !== 'DECLINE')) && (
+               {/* --- Logic 3: Đã chọn THAM GIA hoặc đã kết thúc HOẶC là ADMIN --- */}
+               {(participationStatus === 'JOIN' || isAdmin || (ended && participationStatus !== 'DECLINE')) && (
                    <div className="space-y-8 animate-in fade-in">
-                       {/* Cancel Join Button (Only for joined users when not ended) */}
-                       {participationStatus === 'JOIN' && !ended && (
+                       {/* Cancel Join Button (Only for joined users when not ended, NOT for admin) */}
+                       {participationStatus === 'JOIN' && !ended && !isAdmin && (
                            <div className="flex justify-center flex-col items-center gap-2">
                                {confirmDeclineId === poll.id ? (
                                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 bg-surface border border-red-500/50 p-2 rounded-full px-4">
@@ -431,12 +458,12 @@ const Vote: React.FC = () => {
                                         return (
                                             <div 
                                                 key={timeOpt.id} 
-                                                onClick={() => !ended && handleVote(poll.id, timeOpt.id, 'timeOptions')}
+                                                onClick={() => !ended && !isAdmin && handleVote(poll.id, timeOpt.id, 'timeOptions')}
                                                 className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1 
                                                     ${isWinner ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105 z-10' : ''}
                                                     ${isDimmed ? 'opacity-40 grayscale border-border' : ''}
                                                     ${!ended && isVoted ? 'bg-primary/20 border-primary' : ''}
-                                                    ${!ended && !isVoted ? 'bg-surface border-border hover:border-secondary cursor-pointer' : ''}
+                                                    ${!ended && !isVoted ? `bg-surface border-border ${isAdmin ? '' : 'hover:border-secondary cursor-pointer'}` : ''}
                                                 `}
                                             >
                                                 {/* Winner Badge */}
@@ -491,7 +518,7 @@ const Vote: React.FC = () => {
                                    })}
 
                                    {/* --- ADD TIME BUTTON --- */}
-                                   {!ended && participationStatus === 'JOIN' && (
+                                   {!ended && participationStatus === 'JOIN' && !isAdmin && (
                                        <button 
                                            onClick={() => openAddModal(poll.id, 'timeOptions')}
                                            className="relative overflow-hidden p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer h-full min-h-[160px]"
@@ -554,10 +581,32 @@ const Vote: React.FC = () => {
                                           <div className="p-5 flex flex-col flex-1 gap-3 -mt-12 relative z-10">
                                               <div>
                                                   <h4 className={`text-xl font-bold mb-1 transition-colors ${isWinner ? 'text-yellow-400' : (isLeading && !ended ? 'text-primary' : 'text-white')}`}>{option.text}</h4>
+                                                  
+                                                  {/* Address / Link - Updated for Visibility & Clickable Link */}
                                                   {option.description && (
-                                                      <div className="text-xs text-secondary/80 flex items-start gap-1 mt-1">
-                                                          <MapPin size={12} className="shrink-0 mt-0.5" />
-                                                          <span className="line-clamp-2">{option.description}</span>
+                                                      <div className="flex items-start gap-2 mt-3">
+                                                          <MapPin size={14} className="shrink-0 mt-0.5 text-secondary" />
+                                                          {isLink(option.description) ? (
+                                                              <a 
+                                                                  href={option.description} 
+                                                                  target="_blank" 
+                                                                  rel="noopener noreferrer" 
+                                                                  className="text-xs font-medium text-blue-400 hover:text-blue-300 hover:underline break-all"
+                                                                  onClick={(e) => e.stopPropagation()}
+                                                              >
+                                                                  {option.description}
+                                                              </a>
+                                                          ) : (
+                                                              <span className="text-xs font-medium text-secondary break-words">{option.description}</span>
+                                                          )}
+                                                      </div>
+                                                  )}
+
+                                                  {/* Notes - Updated for Visibility */}
+                                                  {option.notes && (
+                                                      <div className="flex items-start gap-2 mt-2">
+                                                          <StickyNote size={14} className="shrink-0 mt-0.5 text-secondary" />
+                                                          <span className="text-xs text-secondary/90 italic break-words">{option.notes}</span>
                                                       </div>
                                                   )}
                                               </div>
@@ -594,14 +643,14 @@ const Vote: React.FC = () => {
                                                   
                                                   <button 
                                                       onClick={() => handleVote(poll.id, option.id, 'options')}
-                                                      disabled={ended || participationStatus !== 'JOIN'}
+                                                      disabled={ended || participationStatus !== 'JOIN' || isAdmin}
                                                       className={`w-full py-3 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
                                                           isVoted 
                                                           ? 'bg-primary text-background hover:bg-primary-hover' 
                                                           : 'bg-background text-white border border-border hover:border-primary hover:text-primary'
-                                                      } ${ended ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                      } ${ended || isAdmin ? 'cursor-not-allowed opacity-50' : ''}`}
                                                   >
-                                                      {isVoted ? <><ThumbsUp size={18} /> Đã chọn</> : (ended ? 'Đã hết giờ' : 'Vote ngay')}
+                                                      {isAdmin ? 'Admin View' : (isVoted ? <><ThumbsUp size={18} /> Đã chọn</> : (ended ? 'Đã hết giờ' : 'Vote ngay'))}
                                                   </button>
                                               </div>
                                           </div>
@@ -610,7 +659,7 @@ const Vote: React.FC = () => {
                               })}
 
                               {/* --- ADD LOCATION BUTTON --- */}
-                              {!ended && participationStatus === 'JOIN' && (
+                              {!ended && participationStatus === 'JOIN' && !isAdmin && (
                                   <button 
                                     onClick={() => openAddModal(poll.id, 'options')}
                                     className="group relative flex flex-col items-center justify-center bg-surface/30 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all p-8 min-h-[300px]"
@@ -706,7 +755,16 @@ const Vote: React.FC = () => {
                                       value={newOptionDesc}
                                       onChange={(e) => setNewOptionDesc(e.target.value)}
                                       className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
-                                      placeholder="VD: 123 Lê Duẩn..."
+                                      placeholder="VD: 123 Lê Duẩn hoặc https://map..."
+                                  />
+                              </label>
+                              <label>
+                                  <span className="text-xs font-bold text-white block mb-1">Ghi chú (Tuỳ chọn)</span>
+                                  <input 
+                                      value={newOptionNotes}
+                                      onChange={(e) => setNewOptionNotes(e.target.value)}
+                                      className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
+                                      placeholder="VD: Pass wifi: 12345678, gửi xe bên cạnh..."
                                   />
                               </label>
                           </>

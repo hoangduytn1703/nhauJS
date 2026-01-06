@@ -24,54 +24,56 @@ const Leaderboard: React.FC = () => {
   }, []);
 
   // Calculate scores
-  const userStats = users.map(u => {
-      // 1. Attendance Count (Admin Confirmed + Manual Offset)
-      const realAttendance = polls.filter(p => p.confirmedAttendances?.includes(u.id)).length;
-      const totalAttendance = Math.max(0, realAttendance + (u.attendanceOffset || 0));
-      
-      // 2. Vote Count (Calculated + Manual Offset)
-      const realVoteCount = polls.filter(p => {
-          const hasVotedTime = (p.timeOptions || []).some(opt => opt.votes.includes(u.id));
-          const hasVotedLoc = p.options.some(opt => opt.votes.includes(u.id));
-          return hasVotedTime && hasVotedLoc;
-      }).length;
-      const totalVoteCount = Math.max(0, realVoteCount + (u.voteOffset || 0));
+  const userStats = users
+      .filter(u => u.role !== 'ADMIN') // Exclude Admins from Leaderboard
+      .map(u => {
+          // 1. Attendance Count (Admin Confirmed + Manual Offset)
+          const realAttendance = polls.filter(p => p.confirmedAttendances?.includes(u.id)).length;
+          const totalAttendance = Math.max(0, realAttendance + (u.attendanceOffset || 0));
+          
+          // 2. Vote Count (Calculated + Manual Offset)
+          const realVoteCount = polls.filter(p => {
+              const hasVotedTime = (p.timeOptions || []).some(opt => opt.votes.includes(u.id));
+              const hasVotedLoc = p.options.some(opt => opt.votes.includes(u.id));
+              return hasVotedTime && hasVotedLoc;
+          }).length;
+          const totalVoteCount = Math.max(0, realVoteCount + (u.voteOffset || 0));
 
-      // 3. Total Money Spent
-      const totalMoney = polls.reduce((sum, poll) => {
-          if (poll.bill && poll.bill.items[u.id]) {
-              const item = poll.bill.items[u.id];
-              return sum + (item.amount || 0) + (item.round2Amount || 0);
-          }
-          return sum;
-      }, 0);
+          // 3. Total Money Spent
+          const totalMoney = polls.reduce((sum, poll) => {
+              if (poll.bill && poll.bill.items[u.id]) {
+                  const item = poll.bill.items[u.id];
+                  return sum + (item.amount || 0) + (item.round2Amount || 0);
+              }
+              return sum;
+          }, 0);
 
-      // 4. Flake Penalty Calculation
-      // "mỗi lần bùng bằng 0.5 lần tham gia" -> Deduct 0.5 from attendance score for ranking
-      // flakeCount is directly editable by Admin and auto-updated by logic
-      const flakes = Math.max(0, u.flakeCount || 0);
-      
-      // Effective Score for Ranking
-      const effectiveAttendanceScore = totalAttendance - (flakes * 0.5);
+          // 4. Flake Penalty Calculation
+          // "mỗi lần bùng bằng 0.5 lần tham gia" -> Deduct 0.5 from attendance score for ranking
+          // flakeCount is directly editable by Admin and auto-updated by logic
+          const flakes = Math.max(0, u.flakeCount || 0);
+          
+          // Effective Score for Ranking
+          const effectiveAttendanceScore = totalAttendance - (flakes * 0.5);
 
-      return {
-          ...u,
-          attendance: totalAttendance,
-          flakeCount: flakes,
-          voteScore: totalVoteCount,
-          totalMoney: totalMoney,
-          effectiveAttendanceScore
-      };
-  }).sort((a, b) => {
-      // Priority 1: Money (Đại Gia Leaderboard)
-      if (b.totalMoney !== a.totalMoney) return b.totalMoney - a.totalMoney;
-      
-      // Priority 2: Reliability (Effective Attendance)
-      if (b.effectiveAttendanceScore !== a.effectiveAttendanceScore) return b.effectiveAttendanceScore - a.effectiveAttendanceScore;
-      
-      // Priority 3: Vote Count
-      return b.voteScore - a.voteScore; 
-  });
+          return {
+              ...u,
+              attendance: totalAttendance,
+              flakeCount: flakes,
+              voteScore: totalVoteCount,
+              totalMoney: totalMoney,
+              effectiveAttendanceScore
+          };
+      }).sort((a, b) => {
+          // Priority 1: Money (Đại Gia Leaderboard)
+          if (b.totalMoney !== a.totalMoney) return b.totalMoney - a.totalMoney;
+          
+          // Priority 2: Reliability (Effective Attendance)
+          if (b.effectiveAttendanceScore !== a.effectiveAttendanceScore) return b.effectiveAttendanceScore - a.effectiveAttendanceScore;
+          
+          // Priority 3: Vote Count
+          return b.voteScore - a.voteScore; 
+      });
 
   // Calculate Rank (handle ties)
   let currentRank = 1;
@@ -123,15 +125,26 @@ const Leaderboard: React.FC = () => {
                     <h3 className="text-xl font-bold text-white text-center">{u.nickname}</h3>
                     <p className="text-secondary text-sm mb-2 text-center line-clamp-1 italic">"{u.quote}"</p>
                     
-                    <div className="mt-auto flex flex-col items-center gap-3 w-full">
+                    <div className="mt-auto flex flex-col items-center gap-4 w-full">
                         <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
                             <DollarSign size={20} />
                             <span className="font-black text-lg">{u.totalMoney.toLocaleString()}k</span>
                         </div>
-                        <div className="flex justify-between w-full text-xs text-secondary px-2">
-                             <div className="flex items-center gap-1"><Beer size={12}/> {u.attendance}</div>
-                             <div className="flex items-center gap-1 text-red-400"><AlertTriangle size={12}/> {u.flakeCount}</div>
-                             <div className="flex items-center gap-1"><CheckCircle size={12}/> {u.voteScore}</div>
+                        
+                        {/* Enlarged Stats Section */}
+                        <div className="flex justify-between w-full text-sm font-bold text-white/80 px-2 py-2 border-t border-border/50">
+                             <div className="flex flex-col items-center" title="Số lần tham gia">
+                                 <Beer size={18} className="text-secondary mb-1"/> 
+                                 <span>{u.attendance}</span>
+                             </div>
+                             <div className="flex flex-col items-center" title="Số lần bùng kèo">
+                                 <AlertTriangle size={18} className="text-red-400 mb-1"/> 
+                                 <span className="text-red-400">{u.flakeCount}</span>
+                             </div>
+                             <div className="flex flex-col items-center" title="Số lần vote">
+                                 <CheckCircle size={18} className="text-blue-400 mb-1"/> 
+                                 <span>{u.voteScore}</span>
+                             </div>
                         </div>
                     </div>
                 </div>

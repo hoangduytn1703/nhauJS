@@ -28,6 +28,7 @@ export interface PollOption {
   id: string;
   text: string;
   description?: string; // Địa chỉ, link google map...
+  notes?: string; // Ghi chú (VD: Pass wifi, gửi xe,...)
   image?: string;
   votes: string[]; // array of user IDs
 }
