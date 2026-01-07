@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* ===== THEME CONFIG ===== */
+@theme {
+  --font-sans: "Be Vietnam Pro", sans-serif;
+  
+  --color-background: #221910;
+  --color-surface: #342618;
+  --color-primary: #f48c25;
+  --color-primary-hover: #d67a1f;
+  --color-secondary: #cbad90;
+  --color-border: #684d31;
+}
+
+/* ===== GLOBAL STYLES ===== */
+body {
+  background-color: var(--color-background);
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background); 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary); 
+}
+
+/* Dark mode for datetime inputs */
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+/* Make the calendar icon white */
+::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}

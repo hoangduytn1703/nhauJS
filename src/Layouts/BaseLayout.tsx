@@ -1,10 +1,10 @@
 import React from 'react';
-import { useAuth } from '@/App';
+import { useAuth } from '@/core/hooks';
 import { Link, useLocation } from 'react-router';
 import { Beer, LogOut, BarChart3, Settings, Home, Receipt, Users } from 'lucide-react';
-import { UserRole } from '@/types/types';
+import { UserRole } from '@/core/types/types';
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
