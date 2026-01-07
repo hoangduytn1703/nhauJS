@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router';
-import { BaseLayout } from '@/layouts/BaseLayout';
+import { BaseLayout } from '@/templates/BaseLayout';
 import { ProtectedRoute, PublicRoute } from './guards';
 import Login from '@/pages/login';
 import Register from '@/pages/register';
