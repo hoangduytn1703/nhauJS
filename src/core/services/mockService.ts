@@ -155,7 +155,7 @@ export const DataService = {
     } as Poll));
   },
 
-  createPoll: async (pollData: Omit<Poll, 'id' | 'createdAt' | 'options' | 'timeOptions'>, options: {text: string, description: string, notes?: string}[], timeOptions: string[]): Promise<Poll> => {
+  createPoll: async (pollData: Omit<Poll, 'id' | 'createdAt' | 'options' | 'timeOptions'>, options: {text: string, description: string, notes?: string, image?: string}[], timeOptions: string[]): Promise<Poll> => {
      const newPollData = {
        ...pollData,
        createdAt: Date.now(),
@@ -169,13 +169,15 @@ export const DataService = {
          description: opt.description,
          notes: opt.notes || '',
          votes: [],
-         image: `https://picsum.photos/400/200?random=${Math.random()}`
+         image: opt.image || `https://picsum.photos/400/200?random=${Math.random()}`,
+         createdBy: pollData.createdBy
        })),
        timeOptions: timeOptions.map((t, index) => ({
            id: `opt_time_${Date.now()}_${index}`,
            text: t,
            description: '',
            votes: [],
+           createdBy: pollData.createdBy
        }))
      };
 
@@ -204,17 +206,21 @@ export const DataService = {
       });
   },
   
-  addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string, notes?: string }, userId: string): Promise<void> => {
+  addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string, notes?: string, image?: string }, userId: string): Promise<void> => {
       const pollRef = doc(db, "polls", pollId);
       
-      const newOption: PollOption = {
-          id: `opt_${type === 'options' ? 'loc' : 'time'}_${Date.now()}_user`,
-          text: data.text,
-          description: data.description || '',
-          notes: data.notes || '',
-          votes: [userId], // Auto vote for creator
-          image: type === 'options' ? `https://picsum.photos/400/200?random=${Date.now()}` : undefined
-      };
+       const newOption: PollOption = {
+           id: `opt_${type === 'options' ? 'loc' : 'time'}_${Date.now()}_user`,
+           text: data.text,
+           description: data.description || '',
+           notes: data.notes || '',
+           votes: [userId], 
+           createdBy: userId
+       };
+
+       if (type === 'options') {
+           newOption.image = data.image || `https://picsum.photos/400/200?random=${Date.now()}`;
+       }
 
       await updateDoc(pollRef, {
           [type]: arrayUnion(newOption)

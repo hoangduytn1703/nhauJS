@@ -155,51 +155,57 @@ const Leaderboard: React.FC = () => {
                 <p className="text-secondary">Vinh danh các nhà tài trợ vàng cho quán nhậu</p>
             </div>
 
-            {/* Top 3 Cards */}
+            {/* Top 3 Cards - Podium Style: 3-2-1 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-8 max-w-5xl mx-auto w-full">
-                {top3.map((u, idx) => (
-                    <div key={u.id}
-                        className={`bg-surface border border-border rounded-2xl p-6 flex flex-col items-center relative cursor-pointer hover:-translate-y-2 transition-transform ${u.rank === 1 ? 'order-2 h-96 border-primary shadow-[0_0_30px_rgba(244,140,37,0.2)]' : 'h-80 order-1 md:order-none'}`}
-                        onClick={() => setSelectedUser(u)}
-                    >
-                        <div className="absolute -top-6">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black border-4 border-surface shadow-lg ${u.rank === 1 ? 'bg-yellow-400 text-black text-xl' : u.rank === 2 ? 'bg-gray-300 text-black' : 'bg-orange-700 text-white'}`}>
-                                {u.rank}
+                {top3.map((u, idx) => {
+                    // Determine order: Rank 1 (center), Rank 2 (left), Rank 3 (right)
+                    let orderClass = '';
+                    if (u.rank === 1) orderClass = 'md:order-2'; // Center
+                    else if (u.rank === 2) orderClass = 'md:order-1'; // Left
+                    else if (u.rank === 3) orderClass = 'md:order-3'; // Right
+                    
+                    return (
+                        <div key={u.id}
+                            className={`bg-surface border border-border rounded-2xl p-6 flex flex-col items-center relative cursor-pointer hover:-translate-y-2 transition-transform ${u.rank === 1 ? 'h-96 border-primary shadow-[0_0_30px_rgba(244,140,37,0.5)]' : 'h-90'} ${orderClass}`}
+                            onClick={() => setSelectedUser(u)}
+                        >
+                            <div className="absolute -top-6">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black border-4 border-surface shadow-lg ${u.rank === 1 ? 'bg-yellow-400 text-black text-xl' : u.rank === 2 ? 'bg-gray-300 text-black' : 'bg-orange-700 text-white'}`}>
+                                    {u.rank}
+                                </div>
                             </div>
-                        </div>
-                        <img src={u.avatar} className="w-24 h-24 rounded-full border-4 border-background mb-4 mt-6 object-cover" />
+                            <img src={u.avatar} className="w-24 h-24 rounded-full border-4 border-background mb-4 mt-6 object-cover" />
 
-                        {/* SWAPPED: Real Name is bigger, Nickname is smaller */}
-                        <h3 className="text-xl font-black text-white text-center uppercase">{u.name}</h3>
-                        <p className="text-primary font-bold text-sm mb-1 text-center">{u.nickname}</p>
-                        <p className="text-secondary text-xs mb-2 text-center line-clamp-1 italic">"{u.quote}"</p>
+                            {/* SWAPPED: Real Name is bigger, Nickname is smaller */}
+                            <h3 className="text-xl font-black text-white text-center uppercase">{u.name}</h3>
+                            <p className="text-primary font-bold text-sm mb-1 text-center">{u.nickname}</p>
+                            <p className="text-secondary text-xs mb-2 text-center line-clamp-1 italic">"{u.quote}"</p>
 
-                        <div className="mt-auto flex flex-col items-center gap-4 w-full">
-                            <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
-                                <DollarSign size={20} />
-                                <span className="font-black text-lg">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
-                            </div>
+                            <div className="mt-auto flex flex-col items-center gap-4 w-full">
+                                <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
+                                    <DollarSign size={20} />
+                                    <span className="font-black text-lg">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
+                                </div>
 
-                            {/* Enlarged Stats Section */}
-                            <div className="flex justify-between w-full text-sm font-bold text-white/80 px-2 py-2 border-t border-border/50">
-                                <div className="flex flex-col items-center" title="Số lần tham gia">
-                                    <Beer size={18} className="text-secondary mb-1" />
-                                    <div className="flex items-center gap-1">
-                                        <span>{u.attendance}</span>
+                                {/* Stats Section - Fixed Layout */}
+                                <div className="flex justify-around items-center w-full text-sm font-bold text-white/80 px-2 py-2 border-t border-border/50 gap-2">
+                                    <div className="flex flex-col items-center flex-1 min-w-0" title="Số lần tham gia">
+                                        <Beer size={18} className="text-secondary mb-1 flex-shrink-0" />
+                                        <span className="text-center">{u.attendance}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center flex-1 min-w-0" title="Số lần bùng kèo">
+                                        <AlertTriangle size={18} className="text-red-400 mb-1 flex-shrink-0" />
+                                        <span className="text-red-400 text-center">{u.flakeCount}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center flex-1 min-w-0" title="Số lần vote">
+                                        <CheckCircle size={18} className="text-blue-400 mb-1 flex-shrink-0" />
+                                        <span className="text-center">{u.voteScore}</span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-center" title="Số lần bùng kèo">
-                                    <AlertTriangle size={18} className="text-red-400 mb-1" />
-                                    <span className="text-red-400">{u.flakeCount}</span>
-                                </div>
-                                <div className="flex flex-col items-center" title="Số lần vote">
-                                    <CheckCircle size={18} className="text-blue-400 mb-1" />
-                                    <span>{u.voteScore}</span>
-                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* List of others */}
