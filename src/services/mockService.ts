@@ -1,4 +1,4 @@
-import { User, Poll, UserRole, PollOption, ParticipantData, BillInfo } from '../types';
+import { User, Poll, UserRole, PollOption, ParticipantData, BillInfo } from '@/types/types';
 import { auth, db } from './firebaseConfig';
 import { 
   signInWithEmailAndPassword, 

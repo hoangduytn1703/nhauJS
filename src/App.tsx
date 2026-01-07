@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, UserRole } from './types';
-import { Layout } from './components/Layout';
-import { DataService } from './services/mockService'; // Import DataService
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import Vote from './pages/Vote';
-import Admin from './pages/Admin';
-import Leaderboard from './pages/Leaderboard';
-import BillSplit from './pages/BillSplit';
-import Members from './pages/Members';
+import { HashRouter, Routes, Route, Navigate } from 'react-router';
+import { User, UserRole } from '@/types/types';
+import { Layout } from '@/components/Layout';
+import { DataService } from '@/services/mockService';
+import Login from '@/pages/login';
+import Register from '@/pages/register';
+import Profile from '@/pages/profile';
+import Vote from '@/pages/vote';
+import Admin from '@/pages/admin';
+import Leaderboard from '@/pages/leaderboard';
+import BillSplit from '@/pages/bill-split';
+import Members from '@/pages/members';
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -32,11 +32,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const login = (userData: User, remember: boolean) => {
     setUser(userData);
     if (remember) {
-        localStorage.setItem('nhau_user', JSON.stringify(userData));
-        sessionStorage.removeItem('nhau_user');
+      localStorage.setItem('nhau_user', JSON.stringify(userData));
+      sessionStorage.removeItem('nhau_user');
     } else {
-        sessionStorage.setItem('nhau_user', JSON.stringify(userData));
-        localStorage.removeItem('nhau_user');
+      sessionStorage.setItem('nhau_user', JSON.stringify(userData));
+      localStorage.removeItem('nhau_user');
     }
   };
 
@@ -50,8 +50,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // SECURITY GUARD: Check if 'data' is a SyntheticEvent or DOM Event
     // This prevents "Converting circular structure to JSON" error if updateUser is attached directly to onClick
     if (data && (data as any).preventDefault !== undefined) {
-        console.warn("Attempted to pass an Event object to updateUser. Ignoring.");
-        return;
+      console.warn("Attempted to pass an Event object to updateUser. Ignoring.");
+      return;
     }
 
     if (user) {
@@ -59,9 +59,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       setUser(updated);
       // Update active storage
       if (localStorage.getItem('nhau_user')) {
-          localStorage.setItem('nhau_user', JSON.stringify(updated));
+        localStorage.setItem('nhau_user', JSON.stringify(updated));
       } else {
-          sessionStorage.setItem('nhau_user', JSON.stringify(updated));
+        sessionStorage.setItem('nhau_user', JSON.stringify(updated));
       }
     }
   };
@@ -69,35 +69,35 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   // Check login status & Sync with DB
   useEffect(() => {
     const initAuth = async () => {
-        try {
-            // Prioritize localStorage, fall back to sessionStorage
-            const stored = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user');
-            
-            if (stored) {
-                const localUser = JSON.parse(stored);
-                // 1. Optimistic load from local storage
-                setUser(localUser);
+      try {
+        // Prioritize localStorage, fall back to sessionStorage
+        const stored = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user');
 
-                // 2. Fetch fresh data from Firestore to ensure Role/Avatar is up-to-date
-                const freshUser = await DataService.getUser(localUser.id);
-                if (freshUser) {
-                    setUser(freshUser);
-                    // Update active storage
-                    if (localStorage.getItem('nhau_user')) {
-                        localStorage.setItem('nhau_user', JSON.stringify(freshUser));
-                    } else {
-                        sessionStorage.setItem('nhau_user', JSON.stringify(freshUser));
-                    }
-                }
+        if (stored) {
+          const localUser = JSON.parse(stored);
+          // 1. Optimistic load from local storage
+          setUser(localUser);
+
+          // 2. Fetch fresh data from Firestore to ensure Role/Avatar is up-to-date
+          const freshUser = await DataService.getUser(localUser.id);
+          if (freshUser) {
+            setUser(freshUser);
+            // Update active storage
+            if (localStorage.getItem('nhau_user')) {
+              localStorage.setItem('nhau_user', JSON.stringify(freshUser));
+            } else {
+              sessionStorage.setItem('nhau_user', JSON.stringify(freshUser));
             }
-        } catch (e) {
-            console.error("Failed to sync user profile", e);
-            // Clear corrupted data if JSON parse fails
-            localStorage.removeItem('nhau_user');
-            sessionStorage.removeItem('nhau_user');
-        } finally {
-            setLoading(false); // Done loading regardless of result
+          }
         }
+      } catch (e) {
+        console.error("Failed to sync user profile", e);
+        // Clear corrupted data if JSON parse fails
+        localStorage.removeItem('nhau_user');
+        sessionStorage.removeItem('nhau_user');
+      } finally {
+        setLoading(false); // Done loading regardless of result
+      }
     };
     initAuth();
   }, []);
@@ -114,13 +114,13 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 // 1. ProtectedRoute: Only allows authenticated users
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
-      return (
-          <div className="min-h-screen flex items-center justify-center bg-background text-primary">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-      );
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-primary">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   if (!user) return <Navigate to="/login" replace />;
@@ -130,7 +130,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // 2. PublicRoute: Only allows guests (redirects to Home if logged in)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) return null; // Or a minimal spinner
 
   if (user) return <Navigate to="/" replace />;
@@ -140,7 +140,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // 3. AdminRoute: Only allows Admin
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) return null;
 
   if (!user || user.role !== UserRole.ADMIN) return <Navigate to="/" replace />;
@@ -164,20 +164,20 @@ const App: React.FC = () => {
                 <Register />
               </PublicRoute>
             } />
-            
+
             {/* Protected Routes */}
             <Route path="/" element={
               <ProtectedRoute>
                 <Vote />
               </ProtectedRoute>
             } />
-            
+
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
               </ProtectedRoute>
             } />
-            
+
             <Route path="/leaderboard" element={
               <ProtectedRoute>
                 <Leaderboard />
@@ -195,7 +195,7 @@ const App: React.FC = () => {
                 <Members />
               </ProtectedRoute>
             } />
-            
+
             {/* Admin Route is now accessible to regular users (read-only handled in component) */}
             <Route path="/admin" element={
               <ProtectedRoute>
