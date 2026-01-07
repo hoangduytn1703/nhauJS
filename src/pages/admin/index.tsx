@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '@/services/mockService';
 import { User, Poll, PollOption, UserRole } from '@/types/types';
 import { useAuth } from '@/App';
-import { Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
 
@@ -17,6 +17,7 @@ const Admin: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'USERS' | 'POLLS'>('USERS');
     const [users, setUsers] = useState<User[]>([]);
     const [polls, setPolls] = useState<Poll[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Modal State
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -31,13 +32,13 @@ const Admin: React.FC = () => {
     const [resultDate, setResultDate] = useState<string>(''); // YYYY-MM-DD
 
     // Location Options State
-    const [pollOptions, setPollOptions] = useState<{ id?: string, text: string, description: string, notes: string, votes?: string[] }[]>([
-        { text: '', description: '', notes: '' },
-        { text: '', description: '', notes: '' }
+    const [pollOptions, setPollOptions] = useState<{ id?: string, text: string, description: string, notes: string, image?: string, createdBy?: string, votes?: string[] }[]>([
+        { text: '', description: '', notes: '', image: '' },
+        { text: '', description: '', notes: '', image: '' }
     ]);
 
     // Time Options State
-    const [timeOptions, setTimeOptions] = useState<{ id?: string, text: string, votes?: string[] }[]>([
+    const [timeOptions, setTimeOptions] = useState<{ id?: string, text: string, createdBy?: string, votes?: string[] }[]>([
         { text: '' },
         { text: '' }
     ]);
@@ -133,14 +134,17 @@ const Admin: React.FC = () => {
             text: o.text,
             description: o.description || '',
             notes: o.notes || '',
-            votes: o.votes
+            image: o.image || '',
+            votes: o.votes,
+            createdBy: o.createdBy
         }));
         setPollOptions(formOptions);
 
         const formTimes = (poll.timeOptions || []).map(t => ({
             id: t.id,
             text: t.text,
-            votes: t.votes
+            votes: t.votes,
+            createdBy: t.createdBy
         }));
         if (formTimes.length === 0) {
             setTimeOptions([{ text: '' }, { text: '' }]);
@@ -165,7 +169,7 @@ const Admin: React.FC = () => {
         setAllowMultiple(false);
         setDeadlineDate('');
         setResultDate('');
-        setPollOptions([{ text: '', description: '', notes: '' }, { text: '', description: '', notes: '' }]);
+        setPollOptions([{ text: '', description: '', notes: '', image: '' }, { text: '', description: '', notes: '', image: '' }]);
         setTimeOptions([{ text: '' }, { text: '' }]);
         setSelectedFinalTime('');
         setSelectedFinalLoc('');
@@ -207,13 +211,15 @@ const Admin: React.FC = () => {
                     description: opt.description,
                     notes: opt.notes,
                     votes: opt.votes || [],
-                    image: `https://picsum.photos/400/200?random=${idx}`
+                    image: opt.image || `https://picsum.photos/400/200?random=${idx}`,
+                    createdBy: opt.createdBy || user.id
                 }));
 
                 const updatedTimeOptions: PollOption[] = timeOptions.filter(t => t.text.trim() !== '').map((t, idx) => ({
                     id: t.id || `opt_time_${Date.now()}_${idx}`,
                     text: t.text,
-                    votes: t.votes || []
+                    votes: t.votes || [],
+                    createdBy: t.createdBy || user.id
                 }));
 
                 await DataService.updatePoll(editingPollId, {
@@ -390,12 +396,12 @@ const Admin: React.FC = () => {
         return options.filter(o => o.votes.length === maxVotes);
     }
 
-    const handleOptionChange = (idx: number, field: 'text' | 'description' | 'notes', val: string) => {
+    const handleOptionChange = (idx: number, field: string, val: any) => {
         const newOpts = [...pollOptions];
         newOpts[idx] = { ...newOpts[idx], [field]: val };
         setPollOptions(newOpts);
     };
-    const addOption = () => setPollOptions([...pollOptions, { text: '', description: '', notes: '' }]);
+    const addOption = () => setPollOptions([...pollOptions, { text: '', description: '', notes: '', image: '' }]);
     const removeOption = (idx: number) => {
         if (pollOptions.length <= 2) return;
         setPollOptions(pollOptions.filter((_, i) => i !== idx));
@@ -411,6 +417,12 @@ const Admin: React.FC = () => {
         if (timeOptions.length <= 1) return;
         setTimeOptions(timeOptions.filter((_, i) => i !== idx));
     }
+
+    const filteredUsers = users.filter(u => 
+        u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="flex flex-col gap-8 pb-20">
@@ -543,6 +555,17 @@ const Admin: React.FC = () => {
             </header>
 
             {activeTab === 'USERS' && (
+                <div className="flex flex-col gap-6">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm thành viên (Tên, Email)..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
+                        />
+                    </div>
                 <div className="bg-surface rounded-2xl border border-border overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm text-secondary">
@@ -555,7 +578,7 @@ const Admin: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {users.map(u => (
+                                {filteredUsers.map(u => (
                                     <tr key={u.id} className={`hover:bg-background/50 cursor-pointer ${u.isBanned ? 'bg-red-900/10' : ''}`} onClick={() => setSelectedUser(u)}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -634,6 +657,7 @@ const Admin: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
             )}
 
@@ -762,6 +786,31 @@ const Admin: React.FC = () => {
                                                         className="w-full bg-transparent text-xs text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
                                                         placeholder="Ghi chú..."
                                                     />
+                                                </div>
+
+                                                {/* Image Upload / Link */}
+                                                <div className="flex flex-col gap-2 pl-6 pt-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin size={14} className="text-secondary shrink-0" />
+                                                        <input
+                                                            value={opt.image || ''}
+                                                            onChange={e => handleOptionChange(idx, 'image', e.target.value)}
+                                                            className="flex-1 bg-transparent text-[10px] text-white outline-none border-b border-border/50 focus:border-primary pb-1 placeholder-secondary/50"
+                                                            placeholder="Link hình ảnh quán..."
+                                                        />
+                                                    </div>
+                                                    {opt.image && (
+                                                        <div className="relative w-full h-16 rounded overflow-hidden border border-border group/preview">
+                                                            <img src={opt.image} className="w-full h-full object-cover" alt="Preview" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => handleOptionChange(idx, 'image', '')}
+                                                                className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover/preview:opacity-100 transition-opacity"
+                                                            >
+                                                                <XCircle size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

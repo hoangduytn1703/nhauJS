@@ -6,6 +6,76 @@ import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XC
 import { Link } from 'react-router';
 import { PollResultModal } from '@/components/PollResultModal';
 
+const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadline, ended }) => {
+    const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
+
+    useEffect(() => {
+        if (ended || timeLeft <= 0) return;
+        const timer = setInterval(() => {
+            const next = deadline - Date.now();
+            setTimeLeft(next);
+            if (next <= 0) clearInterval(timer);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [deadline, ended, timeLeft]);
+
+    const deadlineDate = new Date(deadline);
+    const deadlineText = `${deadlineDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ngày ${deadlineDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
+
+    if (ended || timeLeft <= 0) {
+        return (
+            <div className="flex flex-col items-end gap-1">
+                <div className="text-[10px] text-secondary font-medium opacity-60 pr-1">
+                    Đã đóng lúc {deadlineText}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface/50 border border-border text-secondary text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
+                    <Clock size={12} className="opacity-50" />
+                    <span>Đã đóng sổ</span>
+                </div>
+            </div>
+        );
+    }
+
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    const timeframe = hours > 0 ? `${hours}h ${minutes}m` : (minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+    const isUrgent = timeLeft < 3600000; // < 1 hour
+    const isVeryUrgent = timeLeft < 600000; // < 10 mins
+
+    return (
+        <div className="flex flex-col items-end gap-1.5 group">
+            <div className="text-[16px] text-secondary font-medium tracking-wide flex items-center gap-1 opacity-70 group-hover:opacity-100 cursor-pointer transition-opacity pr-1">
+                Hết hạn: <span className="text-white font-bold">{deadlineText}</span>
+            </div>
+            <div className={`cursor-pointer flex items-center gap-3 px-4 py-2 rounded-2xl border-2 shadow-lg transition-all duration-300 backdrop-blur-md
+                ${isUrgent 
+                    ? 'bg-red-500/10 border-red-500/40 text-red-500 ring-4 ring-red-500/5' 
+                    : 'bg-primary/10 border-primary/30 text-primary ring-4 ring-primary/5'}`}>
+                <div className="relative">
+                    <Clock size={18} className={`${isVeryUrgent ? 'animate-bounce' : (isUrgent ? 'animate-pulse' : '')}`} />
+                    {isUrgent && <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>}
+                </div>
+                <div className="flex flex-col leading-none">
+                    <span className="font-mono text-xl font-black tracking-tighter tabular-nums flex items-baseline gap-0.5">
+                        {hours > 0 && <span>{hours}<small className="text-[10px] font-bold mx-px">h</small></span>}
+                        <span>{minutes.toString().padStart(2, '0')}<small className="text-[10px] font-bold mx-px">m</small></span>
+                        <span className={isUrgent ? 'text-red-400' : 'text-primary/60'}>{seconds.toString().padStart(2, '0')}<small className="text-[10px] font-bold ml-px">s</small></span>
+                    </span>
+                </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                <div className={`w-1 h-1 rounded-full ${isUrgent ? 'bg-red-500 animate-pulse' : 'bg-primary'}`}></div>
+                <span className={`text-[9px] font-black uppercase tracking-[0.25em] ${isUrgent ? 'text-red-500' : 'text-secondary'}`}>
+                    {isUrgent ? 'GẤP GẤP GẤP' : 'CÒN LẠI'}
+                </span>
+            </div>
+        </div>
+    );
+};
+
+
 const Vote: React.FC = () => {
     const { user } = useAuth();
     const [polls, setPolls] = useState<Poll[]>([]);
@@ -28,6 +98,7 @@ const Vote: React.FC = () => {
     const [newOptionText, setNewOptionText] = useState('');
     const [newOptionDesc, setNewOptionDesc] = useState('');
     const [newOptionNotes, setNewOptionNotes] = useState(''); // New field for notes
+    const [newOptionImage, setNewOptionImage] = useState(''); // New field for image
     const [adding, setAdding] = useState(false);
 
     // View Voters Modal State
@@ -119,6 +190,7 @@ const Vote: React.FC = () => {
         setNewOptionText('');
         setNewOptionDesc('');
         setNewOptionNotes('');
+        setNewOptionImage('');
     };
 
     const submitNewOption = async () => {
@@ -131,13 +203,15 @@ const Vote: React.FC = () => {
             await DataService.addPollOption(addModal.pollId, addModal.type, {
                 text: newOptionText,
                 description: newOptionDesc,
-                notes: newOptionNotes
+                notes: newOptionNotes,
+                image: newOptionImage
             }, user.id);
 
             setAddModal({ ...addModal, show: false });
             fetchData();
-        } catch (e) {
-            alert("Lỗi khi thêm option");
+        } catch (e: any) {
+            console.error("Submit option error:", e);
+            alert("Lỗi khi thêm: " + (e.message || "Vui lòng thử lại"));
         } finally {
             setAdding(false);
         }
@@ -215,13 +289,6 @@ const Vote: React.FC = () => {
                     <h2 className="text-4xl md:text-6xl font-black leading-tight tracking-tight text-white">
                         Chốt kèo lẹ lẹ
                     </h2>
-                </div>
-                <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
-                    <div className="text-secondary text-sm font-medium uppercase">Deadline hôm nay</div>
-                    <div className="flex items-center gap-2 text-white font-mono text-2xl font-bold bg-surface px-4 py-2 rounded-lg border border-border">
-                        <Clock className="text-primary" />
-                        {deadlineDisplay}
-                    </div>
                 </div>
             </section>
 
@@ -332,12 +399,7 @@ const Vote: React.FC = () => {
                             </div>
 
                             {poll.deadline > 0 && (
-                                <div className="text-xs text-secondary bg-surface px-3 py-1 rounded border border-border">
-                                    {ended
-                                        ? `Đã kết thúc lúc ${new Date(poll.deadline).toLocaleTimeString('vi-VN')} ${new Date(poll.deadline).toLocaleDateString('vi-VN')}`
-                                        : `Hết hạn: ${new Date(poll.deadline).toLocaleString('vi-VN')}`
-                                    }
-                                </div>
+                                <CountdownBadge deadline={poll.deadline} ended={ended} />
                             )}
                         </div>
 
@@ -504,6 +566,15 @@ const Vote: React.FC = () => {
                                                             Tháng {dateInfo.month}
                                                         </div>
 
+                                                        {/* Contributor */}
+                                                        {timeOpt.createdBy && userMap[timeOpt.createdBy] && (
+                                                            <div className="mt-1 flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                                                                <span className="text-[10px] bg-white/10 text-white px-1.5 py-0.5 rounded-sm italic">
+                                                                    {userMap[timeOpt.createdBy].name} đề xuất
+                                                                </span>
+                                                            </div>
+                                                        )}
+
                                                         <div className="mt-3 w-full border-t border-white/10 pt-2 flex flex-col items-center gap-2"
                                                             onClick={(e) => { e.stopPropagation(); openVotersModal(timeOpt.text, timeOpt.votes); }}
                                                         >
@@ -595,7 +666,14 @@ const Vote: React.FC = () => {
 
                                                     <div className="p-5 flex flex-col flex-1 gap-3 -mt-12 relative z-10">
                                                         <div>
-                                                            <h4 className={`text-xl font-bold mb-1 transition-colors ${isWinner ? 'text-yellow-400' : (isLeading && !ended ? 'text-primary' : 'text-white')}`}>{option.text}</h4>
+                                                            <div className="flex flex-wrap items-baseline gap-2 mb-1">
+                                                                <h4 className={`text-xl font-bold transition-colors ${isWinner ? 'text-yellow-400' : (isLeading && !ended ? 'text-primary' : 'text-white')}`}>{option.text}</h4>
+                                                                {option.createdBy && userMap[option.createdBy] && (
+                                                                    <span className="text-[11px] text-secondary bg-white/5 px-2 py-0.5 rounded italic opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                        {userMap[option.createdBy].name} đề xuất
+                                                                    </span>
+                                                                )}
+                                                            </div>
 
                                                             {/* Address / Link - Updated for Visibility & Clickable Link */}
                                                             {option.description && (
@@ -801,6 +879,20 @@ const Vote: React.FC = () => {
                                             className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
                                             placeholder="VD: Pass wifi: 12345678, gửi xe bên cạnh..."
                                         />
+                                    </label>
+                                    <label>
+                                        <span className="text-xs font-bold text-white block mb-1">Link hình ảnh quán (Tuỳ chọn)</span>
+                                        <input
+                                            value={newOptionImage}
+                                            onChange={(e) => setNewOptionImage(e.target.value)}
+                                            className="w-full bg-background border border-border rounded-lg p-3 text-white focus:border-primary outline-none"
+                                            placeholder="Dán link ảnh tại đây..."
+                                        />
+                                        {newOptionImage && (
+                                            <div className="mt-2 rounded-lg overflow-hidden h-20 border border-border bg-surface">
+                                                <img src={newOptionImage} className="w-full h-full object-cover" alt="Preview" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                            </div>
+                                        )}
                                     </label>
                                 </>
                             ) : (

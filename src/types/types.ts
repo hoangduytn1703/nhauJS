@@ -31,6 +31,7 @@ export interface PollOption {
   notes?: string; // Ghi chú (VD: Pass wifi, gửi xe,...)
   image?: string;
   votes: string[]; // array of user IDs
+  createdBy?: string; // User ID who added this option
 }
 
 export interface ParticipantData {
