@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Poll, UserRole } from '../types';
+import { User, Poll, UserRole } from '@/types/types';
 import { X, Calendar, CheckCircle, AlertTriangle, Trophy, UserX } from 'lucide-react';
 
 interface UserDetailModalProps {
@@ -11,11 +11,11 @@ interface UserDetailModalProps {
     onToggleFlake?: (pollId: string, userId: string) => void;
 }
 
-export const UserDetailModal: React.FC<UserDetailModalProps> = ({ 
-    user, 
-    onClose, 
-    allPolls, 
-    currentUserRole, 
+export const UserDetailModal: React.FC<UserDetailModalProps> = ({
+    user,
+    onClose,
+    allPolls,
+    currentUserRole,
     onToggleAttendance,
     onToggleFlake
 }) => {
@@ -25,12 +25,12 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     const history = allPolls.map(poll => {
         const participant = poll.participants?.[user.id];
         const isJoined = participant?.status === 'JOIN';
-        
+
         // Check if voted (Has selected at least 1 time AND 1 location)
         const hasVotedTime = (poll.timeOptions || []).some(opt => opt.votes.includes(user.id));
         const hasVotedLoc = poll.options.some(opt => opt.votes.includes(user.id));
         const isVotedFull = hasVotedTime && hasVotedLoc;
-        
+
         // Admin Confirmed Attendance
         const isAttended = poll.confirmedAttendances?.includes(user.id) || false;
 
@@ -48,12 +48,12 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     }).filter(item => item.isJoined || item.isAttended); // Only show relevant polls
 
     const totalAttended = allPolls.filter(p => p.confirmedAttendances?.includes(user.id)).length + (user.attendanceOffset || 0);
-    
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
             <div className="bg-surface border border-border rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                
-                <button 
+
+                <button
                     onClick={onClose}
                     className="absolute top-4 right-4 z-50 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white transition-colors"
                 >
@@ -62,17 +62,17 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
-                    
+
                     {/* --- MEMBERSHIP CARD SECTION --- */}
                     <div className="flex justify-center pt-8 pb-4 bg-background/30 border-b border-border">
-                         <div 
+                        <div
                             className="relative rounded-2xl overflow-hidden shadow-2xl border border-secondary/30 group bg-[#1a120b] shrink-0 transform transition-transform hover:scale-[1.02]"
                             style={{ height: '220px', width: '350px' }}
-                         >
+                        >
                             {/* Background */}
                             <div className="absolute inset-0 bg-gradient-to-br from-[#493622] via-[#231a10] to-[#1a120b]"></div>
                             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white,transparent)]"></div>
-                            
+
                             <div className="relative z-10 flex flex-col h-full p-5 justify-between">
                                 {/* Header Badges */}
                                 <div className="flex justify-between items-start">
@@ -86,9 +86,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
                                 {/* Avatar & Info */}
                                 <div className="flex gap-4 items-center">
-                                    <img 
-                                        src={user.avatar} 
-                                        className="w-16 h-16 rounded-full border-2 border-secondary object-cover shrink-0" 
+                                    <img
+                                        src={user.avatar}
+                                        className="w-16 h-16 rounded-full border-2 border-secondary object-cover shrink-0"
                                     />
                                     <div className="flex-1 min-w-0 pr-2">
                                         <h2 className="text-white text-xl font-black mb-1 truncate leading-tight pb-1">
@@ -98,7 +98,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                             <p className="text-secondary text-[10px] font-bold uppercase truncate">{user.name}</p>
                                             <p className="text-secondary/70 text-[9px] font-mono mt-0.5 truncate">{user.email}</p>
                                         </div>
-                                        
+
                                         {(user.flakeCount || 0) > 0 && (
                                             <div className="flex items-center gap-1 mt-1 text-[9px] text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded w-fit border border-red-900/30">
                                                 <AlertTriangle size={8} /> {user.flakeCount} lần bùng
@@ -118,20 +118,20 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                     </div>
                                 </div>
                             </div>
-                         </div>
+                        </div>
                     </div>
 
                     {/* --- HISTORY SECTION --- */}
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-white font-bold flex items-center gap-2">
-                                <Calendar size={18} className="text-primary"/> Lịch sử chinh chiến
+                                <Calendar size={18} className="text-primary" /> Lịch sử chinh chiến
                             </h3>
                             <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-bold border border-primary/20 flex items-center gap-1">
-                                <Trophy size={12}/> {totalAttended} lần tham gia
+                                <Trophy size={12} /> {totalAttended} lần tham gia
                             </span>
                         </div>
-                        
+
                         {history.length === 0 ? (
                             <div className="text-center py-8 text-secondary border border-dashed border-border rounded-xl">
                                 Chưa tham gia kèo nào.
@@ -159,34 +159,32 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                     {currentUserRole === 'ADMIN' && onToggleAttendance && onToggleFlake ? (
                                                         <div className="flex items-center justify-center gap-2">
                                                             {/* Check-in Button (Green) */}
-                                                            <button 
+                                                            <button
                                                                 onClick={() => {
                                                                     if (!item.isAttended) onToggleAttendance(item.poll.id, user.id);
                                                                 }}
-                                                                className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${
-                                                                    item.isAttended 
-                                                                    ? 'bg-green-600 border-green-600 text-white cursor-default' 
+                                                                className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isAttended
+                                                                    ? 'bg-green-600 border-green-600 text-white cursor-default'
                                                                     : 'bg-surface border-border text-secondary hover:bg-green-500/10 hover:border-green-500 hover:text-green-500'
-                                                                }`}
+                                                                    }`}
                                                                 title="Xác nhận có mặt"
                                                             >
-                                                                {item.isAttended && <CheckCircle size={12}/>} Check-in
+                                                                {item.isAttended && <CheckCircle size={12} />} Check-in
                                                             </button>
 
                                                             {/* Flake Button (Red) - Only if Joined */}
                                                             {item.isJoined && (
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         onToggleFlake(item.poll.id, user.id);
                                                                     }}
-                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${
-                                                                        item.isFlaked
-                                                                        ? 'bg-red-600 border-red-600 text-white cursor-pointer hover:bg-red-700' 
+                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isFlaked
+                                                                        ? 'bg-red-600 border-red-600 text-white cursor-pointer hover:bg-red-700'
                                                                         : 'bg-surface border-border text-secondary hover:bg-red-500/10 hover:border-red-500 hover:text-red-500'
-                                                                    }`}
+                                                                        }`}
                                                                     title={item.isFlaked ? "Hủy phạt bùng" : "Xác nhận bùng kèo (Phạt)"}
                                                                 >
-                                                                    {item.isFlaked ? <UserX size={12}/> : <UserX size={12}/>} {item.isFlaked ? 'Đã Bùng' : 'Bùng'}
+                                                                    {item.isFlaked ? <UserX size={12} /> : <UserX size={12} />} {item.isFlaked ? 'Đã Bùng' : 'Bùng'}
                                                                 </button>
                                                             )}
                                                         </div>
@@ -194,12 +192,12 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                         <div className="flex justify-center">
                                                             {item.isAttended ? (
                                                                 <span className="text-green-400 font-bold text-xs bg-green-900/20 px-2 py-1 rounded border border-green-900/30 flex items-center gap-1">
-                                                                    <CheckCircle size={12}/> Có mặt
+                                                                    <CheckCircle size={12} /> Có mặt
                                                                 </span>
                                                             ) : (
                                                                 item.isFlaked ? (
                                                                     <span className="text-red-400 font-bold text-xs bg-red-900/20 px-2 py-1 rounded border border-red-900/30 flex items-center gap-1">
-                                                                        <UserX size={12}/> Bùng kèo
+                                                                        <UserX size={12} /> Bùng kèo
                                                                     </span>
                                                                 ) : (
                                                                     <span className="text-secondary opacity-30">-</span>

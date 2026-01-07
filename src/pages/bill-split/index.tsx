@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DataService } from '../services/mockService';
-import { Poll, User, BillItem, UserRole } from '../types';
-import { useAuth } from '../App';
+import { DataService } from '@/services/mockService';
+import { Poll, User, BillItem, UserRole } from '@/types/types';
+import { useAuth } from '@/App';
 import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
 const MoneyInput: React.FC<{
@@ -20,13 +20,13 @@ const MoneyInput: React.FC<{
         const raw = e.target.value.replace(/,/g, '');
         // Allow digits only
         if (!/^\d*$/.test(raw)) return;
-        
+
         onChange(Number(raw));
     };
 
     return (
         <div className="relative w-full group">
-            <input 
+            <input
                 type="text"
                 disabled={disabled}
                 className={`w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 pr-8 text-right text-white font-bold font-mono text-lg outline-none transition-all placeholder-white/20
@@ -46,11 +46,11 @@ const BillSplit: React.FC = () => {
     const navigate = useNavigate();
     const [polls, setPolls] = useState<Poll[]>([]);
     const [users, setUsers] = useState<Record<string, User>>({});
-    
+
     // Selection state
     const [selectedPollId, setSelectedPollId] = useState<string>('');
     const selectedPoll = polls.find(p => p.id === selectedPollId);
-    
+
     // Bill State
     const [billImage, setBillImage] = useState<string>('');
     const [userItems, setUserItems] = useState<Record<string, BillItem>>({});
@@ -70,7 +70,7 @@ const BillSplit: React.FC = () => {
         ]).then(([allPolls, allUsers]) => {
             const finishedPolls = allPolls.filter(p => (p.deadline > 0 && Date.now() > p.deadline) || !!p.finalizedOptionId || !!p.finalizedTimeId);
             setPolls(finishedPolls);
-            
+
             const userMap: Record<string, User> = {};
             allUsers.forEach(u => userMap[u.id] = u);
             setUsers(userMap);
@@ -134,7 +134,7 @@ const BillSplit: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) { return alert('Ảnh < 5MB'); }
-  
+
         const reader = new FileReader();
         reader.onload = (readerEvent) => {
             const img = new Image();
@@ -177,7 +177,7 @@ const BillSplit: React.FC = () => {
     // Calculate User's specific amount for QR code
     const currentUserItem = user && userItems[user.id];
     const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount) * 1000 : 0;
-    
+
     // VietQR URL
     const bankBin = "970441"; // VIB
     const bankAccount = "006563589";
@@ -200,12 +200,12 @@ const BillSplit: React.FC = () => {
             <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end">
                 <div>
                     <h1 className="text-3xl font-black text-white flex items-center gap-2">
-                        <Receipt className="text-primary"/> Tính Tiền & Chia Bill
+                        <Receipt className="text-primary" /> Tính Tiền & Chia Bill
                     </h1>
                     <p className="text-secondary">Công khai, minh bạch, tình cảm bền lâu</p>
                 </div>
                 <Link to="/" className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0">
-                    <ArrowLeft size={16}/> Quay lại
+                    <ArrowLeft size={16} /> Quay lại
                 </Link>
             </header>
 
@@ -214,7 +214,7 @@ const BillSplit: React.FC = () => {
                     <h3 className="text-white font-bold mb-4">Chọn kèo đã chốt để xem bill:</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                         {polls.map(p => (
-                            <button 
+                            <button
                                 key={p.id}
                                 onClick={() => setSelectedPollId(p.id)}
                                 className="text-left bg-background border border-border p-4 rounded-xl hover:border-primary transition-colors flex justify-between items-center group"
@@ -231,78 +231,78 @@ const BillSplit: React.FC = () => {
                 </div>
             ) : (
                 <div className="flex flex-col gap-6 animate-in slide-in-from-right-4">
-                     <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center">
                         <button onClick={() => setSelectedPollId('')} className="text-secondary text-sm hover:underline">← Chọn kèo khác</button>
                         {!isAdmin && (
                             <span className="text-xs text-secondary bg-surface px-3 py-1 rounded-full border border-border flex items-center gap-1">
-                                <Lock size={12}/> Chế độ xem (Chỉ Admin được sửa)
+                                <Lock size={12} /> Chế độ xem (Chỉ Admin được sửa)
                             </span>
                         )}
-                     </div>
-                     
-                     {/* 1. Bill Image & Payment Info */}
-                     <div className="bg-surface border border-border rounded-2xl p-6">
-                         <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Camera size={18}/> Ảnh Hóa Đơn</h3>
-                         <div className="flex flex-col md:flex-row gap-6 items-start">
-                             <div 
-                                 onClick={() => isAdmin && fileInputRef.current?.click()}
-                                 className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${isAdmin ? 'cursor-pointer hover:border-primary' : 'cursor-default'}`}
-                             >
-                                 {billImage ? (
-                                     <img src={billImage} className="w-full h-full object-contain" />
-                                 ) : (
-                                     <div className="text-center text-secondary">
-                                         {isAdmin ? (
-                                             <>
-                                                <Camera size={32} className="mx-auto mb-2"/>
+                    </div>
+
+                    {/* 1. Bill Image & Payment Info */}
+                    <div className="bg-surface border border-border rounded-2xl p-6">
+                        <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Camera size={18} /> Ảnh Hóa Đơn</h3>
+                        <div className="flex flex-col md:flex-row gap-6 items-start">
+                            <div
+                                onClick={() => isAdmin && fileInputRef.current?.click()}
+                                className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${isAdmin ? 'cursor-pointer hover:border-primary' : 'cursor-default'}`}
+                            >
+                                {billImage ? (
+                                    <img src={billImage} className="w-full h-full object-contain" />
+                                ) : (
+                                    <div className="text-center text-secondary">
+                                        {isAdmin ? (
+                                            <>
+                                                <Camera size={32} className="mx-auto mb-2" />
                                                 <span>Upload Bill</span>
-                                             </>
-                                         ) : (
-                                             <span>Admin chưa up bill</span>
-                                         )}
-                                     </div>
-                                 )}
-                                 {isAdmin && <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />}
-                             </div>
-                             
-                             <div className="flex-1 w-full">
-                                 {isAdmin ? (
-                                     <>
-                                         <p className="text-secondary text-sm mb-4">Upload ảnh bill để anh em tiện đối chiếu nếu cần thắc mắc.</p>
-                                         <div className="bg-background p-4 rounded-xl border border-border">
-                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Calculator size={16}/> Công cụ chia nhanh</h4>
-                                             <div className="grid grid-cols-2 gap-4">
-                                                 <div>
-                                                     <label className="text-xs text-secondary block mb-1">Tiền Tăng 1 (Mỗi người)</label>
-                                                     <div className="flex gap-2">
-                                                         <MoneyInput 
-                                                            value={baseAmount} 
+                                            </>
+                                        ) : (
+                                            <span>Admin chưa up bill</span>
+                                        )}
+                                    </div>
+                                )}
+                                {isAdmin && <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />}
+                            </div>
+
+                            <div className="flex-1 w-full">
+                                {isAdmin ? (
+                                    <>
+                                        <p className="text-secondary text-sm mb-4">Upload ảnh bill để anh em tiện đối chiếu nếu cần thắc mắc.</p>
+                                        <div className="bg-background p-4 rounded-xl border border-border">
+                                            <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Calculator size={16} /> Công cụ chia nhanh</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-secondary block mb-1">Tiền Tăng 1 (Mỗi người)</label>
+                                                    <div className="flex gap-2">
+                                                        <MoneyInput
+                                                            value={baseAmount}
                                                             onChange={setBaseAmount}
                                                             placeholder="0"
-                                                         />
-                                                         <button onClick={handleApplyBaseAmount} className="bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-xs">Apply</button>
-                                                     </div>
-                                                 </div>
-                                                 <div>
-                                                     <label className="text-xs text-secondary block mb-1">Tiền Tăng 2 (Mỗi người)</label>
-                                                     <div className="flex gap-2">
-                                                         <MoneyInput 
-                                                            value={round2Global} 
+                                                        />
+                                                        <button onClick={handleApplyBaseAmount} className="bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-xs">Apply</button>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-secondary block mb-1">Tiền Tăng 2 (Mỗi người)</label>
+                                                    <div className="flex gap-2">
+                                                        <MoneyInput
+                                                            value={round2Global}
                                                             onChange={setRound2Global}
                                                             placeholder="0"
-                                                         />
-                                                         <button onClick={handleApplyRound2Global} className="bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-xs">Apply</button>
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                         </div>
-                                     </>
-                                 ) : (
-                                     <div className="h-full flex flex-col justify-center">
-                                         <div className="bg-background p-6 rounded-xl border border-border">
-                                             <h4 className="text-xl font-bold text-primary mb-4 text-center">Thông tin thanh toán</h4>
-                                             
-                                             <div className="flex flex-col md:flex-row gap-6 items-center">
+                                                        />
+                                                        <button onClick={handleApplyRound2Global} className="bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-xs">Apply</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="h-full flex flex-col justify-center">
+                                        <div className="bg-background p-6 rounded-xl border border-border">
+                                            <h4 className="text-xl font-bold text-primary mb-4 text-center">Thông tin thanh toán</h4>
+
+                                            <div className="flex flex-col md:flex-row gap-6 items-center">
                                                 {/* QR Block */}
                                                 <div className="bg-white p-3 rounded-lg shadow-lg shrink-0 mx-auto md:mx-0">
                                                     <img src={vietQrUrl} className="w-40 h-40 object-contain" alt="VietQR" />
@@ -316,11 +316,11 @@ const BillSplit: React.FC = () => {
                                                             <div className="text-xs text-secondary">Ngân hàng VIB</div>
                                                             <div className="text-white font-bold font-mono text-lg">{bankAccount}</div>
                                                         </div>
-                                                        <button 
-                                                            onClick={() => {navigator.clipboard.writeText(bankAccount); alert('Copied VIB')}} 
+                                                        <button
+                                                            onClick={() => { navigator.clipboard.writeText(bankAccount); alert('Copied VIB') }}
                                                             className="p-2 bg-white/5 hover:bg-white/10 rounded"
                                                         >
-                                                            <Copy size={16}/>
+                                                            <Copy size={16} />
                                                         </button>
                                                     </div>
 
@@ -329,11 +329,11 @@ const BillSplit: React.FC = () => {
                                                             <div className="text-xs text-secondary">Momo</div>
                                                             <div className="text-white font-bold font-mono text-lg">0798889162</div>
                                                         </div>
-                                                        <button 
-                                                             onClick={() => {navigator.clipboard.writeText("0798889162"); alert('Copied Momo')}}
-                                                             className="p-2 bg-white/5 hover:bg-white/10 rounded"
+                                                        <button
+                                                            onClick={() => { navigator.clipboard.writeText("0798889162"); alert('Copied Momo') }}
+                                                            className="p-2 bg-white/5 hover:bg-white/10 rounded"
                                                         >
-                                                            <Copy size={16}/>
+                                                            <Copy size={16} />
                                                         </button>
                                                     </div>
 
@@ -341,90 +341,91 @@ const BillSplit: React.FC = () => {
                                                         Nội dung CK: <span className="text-white font-bold select-all">"ghi tên vào nhé"</span>
                                                     </div>
                                                 </div>
-                                             </div>
-                                         </div>
-                                     </div>
-                                 )}
-                             </div>
-                         </div>
-                     </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                     {/* 2. List Users */}
-                     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-                         <table className="w-full text-left text-sm text-secondary">
-                             <thead className="bg-background text-white font-bold uppercase text-xs">
-                                 <tr>
-                                     <th className="px-4 py-3">Thành viên</th>
-                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 1 (k)</th>
-                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 2 (k)</th>
-                                     <th className="px-4 py-3 text-right">Tổng</th>
-                                     <th className="px-4 py-3 text-center">Đã đóng?</th>
-                                 </tr>
-                             </thead>
-                             <tbody className="divide-y divide-border">
-                                 {(Object.values(userItems) as BillItem[]).map(item => {
-                                     const displayUser = getDisplayUser(item.userId);
-                                     const isGhost = !users[item.userId];
-                                     return (
-                                     <tr key={item.userId} className={item.userId === user?.id ? 'bg-primary/5' : ''}>
-                                         <td className="px-4 py-3 flex items-center gap-3">
-                                             <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
-                                             <div className="flex flex-col">
-                                                 <span className={`font-bold ${item.userId === user?.id ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
-                                                     {displayUser.nickname} {item.userId === user?.id && '(Bạn)'}
-                                                 </span>
-                                             </div>
-                                         </td>
-                                         <td className="px-4 py-3">
-                                             <MoneyInput 
-                                                value={item.amount}
-                                                onChange={val => handleItemChange(item.userId, 'amount', val)}
-                                                disabled={!isAdmin}
-                                             />
-                                         </td>
-                                         <td className="px-4 py-3">
-                                             <MoneyInput 
-                                                value={item.round2Amount}
-                                                onChange={val => handleItemChange(item.userId, 'round2Amount', val)}
-                                                disabled={!isAdmin}
-                                             />
-                                         </td>
-                                         <td className="px-4 py-3 text-right font-black text-primary text-lg whitespace-nowrap">
-                                             {(item.amount + item.round2Amount).toLocaleString()} k
-                                         </td>
-                                         <td className="px-4 py-3 text-center">
-                                             <div className="flex justify-center">
-                                                 <input 
-                                                    type="checkbox" 
-                                                    checked={item.isPaid}
+                    {/* 2. List Users */}
+                    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+                        <table className="w-full text-left text-sm text-secondary">
+                            <thead className="bg-background text-white font-bold uppercase text-xs">
+                                <tr>
+                                    <th className="px-4 py-3">Thành viên</th>
+                                    <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 1 (k)</th>
+                                    <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 2 (k)</th>
+                                    <th className="px-4 py-3 text-right">Tổng</th>
+                                    <th className="px-4 py-3 text-center">Đã đóng?</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {(Object.values(userItems) as BillItem[]).map(item => {
+                                    const displayUser = getDisplayUser(item.userId);
+                                    const isGhost = !users[item.userId];
+                                    return (
+                                        <tr key={item.userId} className={item.userId === user?.id ? 'bg-primary/5' : ''}>
+                                            <td className="px-4 py-3 flex items-center gap-3">
+                                                <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
+                                                <div className="flex flex-col">
+                                                    <span className={`font-bold ${item.userId === user?.id ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
+                                                        {displayUser.nickname} {item.userId === user?.id && '(Bạn)'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <MoneyInput
+                                                    value={item.amount}
+                                                    onChange={val => handleItemChange(item.userId, 'amount', val)}
                                                     disabled={!isAdmin}
-                                                    onChange={e => handleItemChange(item.userId, 'isPaid', e.target.checked)}
-                                                    className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
-                                                 />
-                                             </div>
-                                         </td>
-                                     </tr>
-                                 )})}
-                                 <tr className="bg-primary/10">
-                                     <td className="px-4 py-4 font-black text-white text-right uppercase tracking-wider" colSpan={3}>TỔNG THIỆT HẠI:</td>
-                                     <td className="px-4 py-4 font-black text-primary text-right text-xl whitespace-nowrap">{grandTotal.toLocaleString()} k</td>
-                                     <td></td>
-                                 </tr>
-                             </tbody>
-                         </table>
-                     </div>
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <MoneyInput
+                                                    value={item.round2Amount}
+                                                    onChange={val => handleItemChange(item.userId, 'round2Amount', val)}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-black text-primary text-lg whitespace-nowrap">
+                                                {(item.amount + item.round2Amount).toLocaleString()} k
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <div className="flex justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={item.isPaid}
+                                                        disabled={!isAdmin}
+                                                        onChange={e => handleItemChange(item.userId, 'isPaid', e.target.checked)}
+                                                        className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                                <tr className="bg-primary/10">
+                                    <td className="px-4 py-4 font-black text-white text-right uppercase tracking-wider" colSpan={3}>TỔNG THIỆT HẠI:</td>
+                                    <td className="px-4 py-4 font-black text-primary text-right text-xl whitespace-nowrap">{grandTotal.toLocaleString()} k</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                     {isAdmin && (
-                         <div className="flex justify-end sticky bottom-4 z-20">
-                             <button 
-                                onClick={handleSave} 
+                    {isAdmin && (
+                        <div className="flex justify-end sticky bottom-4 z-20">
+                            <button
+                                onClick={handleSave}
                                 disabled={saving}
                                 className="bg-primary hover:bg-primary-hover text-background font-bold px-8 py-4 rounded-xl shadow-2xl flex items-center gap-2 transform active:scale-95 transition-all"
-                             >
-                                 <Save size={24}/> {saving ? 'Đang lưu...' : 'Lưu Bill & Cập nhật BXH'}
-                             </button>
-                         </div>
-                     )}
+                            >
+                                <Save size={24} /> {saving ? 'Đang lưu...' : 'Lưu Bill & Cập nhật BXH'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
