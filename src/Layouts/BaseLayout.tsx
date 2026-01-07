@@ -12,7 +12,7 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-white">
-      {/* Navbar - Sticky Top */}
+      {/* Navbar - Sticky Top - */}
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border px-4 lg:px-8 h-16 flex items-center justify-between shadow-sm">
         <Link to="/" className="flex items-center gap-2 md:gap-3">
           <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
