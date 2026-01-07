@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '@/App';
-import { DataService } from '@/services/mockService';
-import { User, UserRole } from '@/types/types';
+import { useAuth } from '@/core/hooks';
+import { DataService } from '@/core/services/mockService';
+import { User, UserRole } from '@/core/types/types';
 import { Badge, Edit, Save, Camera, AlertTriangle, Plus } from 'lucide-react';
 
 const DEFAULT_TAGS = [

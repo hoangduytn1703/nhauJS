@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Poll, UserRole } from '@/types/types';
+import { User, Poll, UserRole } from '@/core/types/types';
 import { X, Calendar, CheckCircle, AlertTriangle, Trophy, UserX } from 'lucide-react';
 
 interface UserDetailModalProps {

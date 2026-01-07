@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { DataService } from '@/services/mockService';
-import { User, Poll, UserRole } from '@/types/types';
+import { DataService } from '@/core/services/mockService';
+import { User, Poll, UserRole } from '@/core/types/types';
 import { Users, Search, Beer, Crown, AlertTriangle } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
-import { useAuth } from '@/App';
+import { useAuth } from '@/core/hooks';
 
 const Members: React.FC = () => {
     const { user } = useAuth();

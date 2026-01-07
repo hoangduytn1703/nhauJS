@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DataService } from '@/services/mockService';
-import { Poll, User, BillItem, UserRole } from '@/types/types';
-import { useAuth } from '@/App';
+import { DataService } from '@/core/services/mockService';
+import { Poll, User, BillItem, UserRole } from '@/core/types/types';
+import { useAuth } from '@/core/hooks';
 import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 
