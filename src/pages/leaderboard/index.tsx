@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { DataService } from '@/services/mockService';
-import { User, Poll, UserRole } from '@/types/types';
+import { DataService } from '@/core/services/mockService';
+import { User, Poll, UserRole } from '@/core/types/types';
 import { Crown, Beer, Eye, CheckCircle, DollarSign, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/App';
+import { useAuth } from '@/core/hooks';
 import { UserDetailModal } from '@/components/UserDetailModal';
 
 const Leaderboard: React.FC = () => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { AuthService } from '@/services/mockService';
-import { useAuth } from '@/App';
+import { AuthService } from '@/core/services/mockService';
+import { useAuth } from '@/core/hooks';
 import { Mail, Lock, User } from 'lucide-react';
 
 const Register: React.FC = () => {

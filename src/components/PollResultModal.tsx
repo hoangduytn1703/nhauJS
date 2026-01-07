@@ -1,5 +1,5 @@
 import React from 'react';
-import { Poll, User } from '@/types/types';
+import { Poll, User } from '@/core/types/types';
 import { XCircle, Calendar, MapPin, Users, UserX, CheckCircle, ExternalLink, UserMinus } from 'lucide-react';
 
 interface PollResultModalProps {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { DataService } from '@/services/mockService';
-import { Poll, User, PollOption } from '@/types/types';
-import { useAuth } from '@/App';
+import { DataService } from '@/core/services/mockService';
+import { Poll, User, PollOption } from '@/core/types/types';
+import { useAuth } from '@/core/hooks';
 import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon, StickyNote, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router';
 import { PollResultModal } from '@/components/PollResultModal';

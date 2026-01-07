@@ -4,67 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nhậu JS - Framework phê nhất thế giới</title>
-    <!-- Beer Favicon using SVG Data URI -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- Google Fonts CDN -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['"Be Vietnam Pro"', 'sans-serif'],
-            },
-            colors: {
-              background: "#221910",
-              surface: "#342618",
-              primary: "#f48c25",
-              "primary-hover": "#d67a1f",
-              secondary: "#cbad90",
-              border: "#684d31"
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      body {
-        background-color: #221910;
-        color: white;
-      }
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #221910; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #684d31; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #f48c25; 
-      }
-      
-      /* Dark mode for datetime inputs */
-      input[type="datetime-local"] {
-        color-scheme: dark;
-      }
-      /* Make the calendar icon white */
-      ::-webkit-calendar-picker-indicator {
-        filter: invert(0.8);
-        cursor: pointer;
-      }
-    </style>
-
-</head>
+  </head>
   <body>
     <div id="root"></div>
-    <!-- Thêm dòng này để chạy React App -->
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

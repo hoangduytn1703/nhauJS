@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DataService } from '@/services/mockService';
-import { User, Poll, PollOption, UserRole } from '@/types/types';
-import { useAuth } from '@/App';
+import { DataService } from '@/core/services/mockService';
+import { User, Poll, PollOption, UserRole } from '@/core/types/types';
+import { useAuth } from '@/core/hooks';
 import { Search, Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
