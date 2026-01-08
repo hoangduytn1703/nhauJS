@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { User, Poll, PollOption, UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Search, Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Calendar, MapPin, Clock, Eye, Gavel, Check, Ban, AlertTriangle, Settings, Save, XCircle, RefreshCw, EyeOff, StickyNote, Trophy, Beer } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
 
@@ -18,6 +18,7 @@ const Admin: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [polls, setPolls] = useState<Poll[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
     // Modal State
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -74,9 +75,19 @@ const Admin: React.FC = () => {
         refreshData();
     }, []);
 
-    const refreshData = () => {
-        DataService.getUsers().then(setUsers);
-        DataService.getPolls().then(setPolls);
+    const refreshData = async () => {
+        try {
+            const [uData, pData] = await Promise.all([
+                DataService.getUsers(),
+                DataService.getPolls()
+            ]);
+            setUsers(uData);
+            setPolls(pData);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
     }
 
     // --- STATS EDITING ---
@@ -424,6 +435,17 @@ const Admin: React.FC = () => {
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center py-32 animate-in fade-in duration-700">
+            <div className="relative mb-6">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
+                <Beer size={80} className="text-primary animate-bounce relative z-10" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Đang tải danh sách...</h3>
+            <p className="text-secondary animate-pulse text-sm font-medium">Chờ chút, hệ thống đang chuẩn bị bia! 🍻</p>
+        </div>
+    );
+
     return (
         <div className="flex flex-col gap-8 pb-20">
             <UserDetailModal
@@ -448,7 +470,7 @@ const Admin: React.FC = () => {
                     <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
                         <button
                             onClick={() => setEditingUserStats(null)}
-                            className="absolute top-4 right-4 text-secondary hover:text-white"
+                            className="absolute top-4 right-4 text-secondary hover:text-white cursor-pointer"
                         >
                             <XCircle size={24} />
                         </button>
@@ -522,7 +544,7 @@ const Admin: React.FC = () => {
 
                             <button
                                 onClick={submitUserStats}
-                                className="bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl mt-2 flex items-center justify-center gap-2"
+                                className="bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl mt-2 flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <Save size={18} /> Lưu Thay Đổi
                             </button>
@@ -540,14 +562,14 @@ const Admin: React.FC = () => {
                 <div className="flex gap-2 bg-surface p-1 rounded-full border border-border">
                     <button
                         onClick={() => setActiveTab('USERS')}
-                        className={`px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 ${activeTab === 'USERS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
+                        className={`cursor-pointer px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 ${activeTab === 'USERS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
                     >
                         Thành viên
                         <span className="bg-black/20 px-2 py-0.5 rounded-full text-[10px] font-black">{users.length}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('POLLS')}
-                        className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'POLLS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
+                        className={`cursor-pointer px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'POLLS' ? 'bg-primary text-black shadow-lg' : 'text-secondary hover:text-white'}`}
                     >
                         Quản lý Kèo
                     </button>
@@ -615,7 +637,7 @@ const Admin: React.FC = () => {
                                                     <>
                                                         <button
                                                             onClick={() => handleEditStatsClick(u)}
-                                                            className="p-2 rounded-lg transition-all bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                                                            className="p-2 rounded-lg transition-all bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
                                                             title="Chỉnh sửa thông tin"
                                                         >
                                                             <Settings size={16} />
@@ -624,7 +646,7 @@ const Admin: React.FC = () => {
                                                         <button
                                                             onClick={() => handleToggleBan(u)}
                                                             disabled={processingUserId === u.id || u.role === 'ADMIN'}
-                                                            className={`p-2 rounded-lg transition-all ${u.isBanned ? 'bg-green-600/20 text-green-400 hover:bg-green-600/40' : 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/40'}`}
+                                                            className={`p-2 rounded-lg transition-all cursor-pointer ${u.isBanned ? 'bg-green-600/20 text-green-400 hover:bg-green-600/40' : 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/40'}`}
                                                             title={u.isBanned ? "Mở khóa (Unban)" : "Cấm (Ban)"}
                                                         >
                                                             {u.isBanned ? <Check size={16} /> : <Ban size={16} />}
@@ -633,7 +655,7 @@ const Admin: React.FC = () => {
                                                         <button
                                                             onClick={() => handleDeleteUser(u.id)}
                                                             disabled={processingUserId === u.id || u.role === 'ADMIN'}
-                                                            className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === u.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
+                                                            className={`p-2 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${confirmDeleteId === u.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
                                                             title="Xóa vĩnh viễn"
                                                         >
                                                             {confirmDeleteId === u.id ? <AlertTriangle size={16} /> : <Trash2 size={16} />}
@@ -645,7 +667,7 @@ const Admin: React.FC = () => {
                                                 {/* VIEW DETAILS (AVAILABLE FOR ALL) */}
                                                 <button
                                                     onClick={() => setSelectedUser(u)}
-                                                    className="p-2 hover:text-primary transition-colors text-secondary"
+                                                    className="p-2 hover:text-primary transition-colors text-secondary cursor-pointer"
                                                     title="Xem chi tiết"
                                                 >
                                                     <Eye size={18} />
@@ -674,7 +696,7 @@ const Admin: React.FC = () => {
                                     {editingPollId ? 'Chỉnh sửa kèo' : 'Tạo kèo mới'}
                                 </h2>
                                 {editingPollId && (
-                                    <button onClick={handleCancelEdit} className="text-xs text-secondary hover:text-white underline">Hủy bỏ</button>
+                                    <button onClick={handleCancelEdit} className="text-xs text-secondary hover:text-white underline cursor-pointer">Hủy bỏ</button>
                                 )}
                             </div>
 
@@ -737,11 +759,11 @@ const Admin: React.FC = () => {
                                                     className="flex-1 bg-transparent text-white text-sm font-bold outline-none text-center cursor-pointer"
                                                 />
                                                 {timeOptions.length > 1 && (
-                                                    <button type="button" onClick={() => removeTime(idx)} className="text-secondary hover:text-red-500"><Trash2 size={14} /></button>
+                                                    <button type="button" onClick={() => removeTime(idx)} className="text-secondary hover:text-red-500 cursor-pointer"><Trash2 size={14} /></button>
                                                 )}
                                             </div>
                                         ))}
-                                        <button type="button" onClick={addTime} className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white rounded-lg p-2 flex items-center justify-center">
+                                        <button type="button" onClick={addTime} className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white rounded-lg p-2 flex items-center justify-center cursor-pointer">
                                             <Plus size={16} />
                                         </button>
                                     </div>
@@ -762,7 +784,7 @@ const Admin: React.FC = () => {
                                                         placeholder={`Tên quán`}
                                                     />
                                                     {pollOptions.length > 2 && (
-                                                        <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                                                        <button type="button" onClick={() => removeOption(idx)} className="text-secondary hover:text-red-500 transition-colors cursor-pointer"><Trash2 size={16} /></button>
                                                     )}
                                                 </div>
 
@@ -805,7 +827,7 @@ const Admin: React.FC = () => {
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => handleOptionChange(idx, 'image', '')}
-                                                                className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover/preview:opacity-100 transition-opacity"
+                                                                className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover/preview:opacity-100 transition-opacity cursor-pointer"
                                                             >
                                                                 <XCircle size={12} />
                                                             </button>
@@ -814,13 +836,13 @@ const Admin: React.FC = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2">
+                                        <button type="button" onClick={addOption} className="w-full py-3 rounded-lg border border-dashed border-secondary text-secondary hover:border-white hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer">
                                             <Plus size={16} /> Thêm địa điểm
                                         </button>
                                     </div>
                                 </div>
 
-                                <button type="submit" className="bg-primary hover:bg-primary-hover text-background font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95">
+                                <button type="submit" className="bg-primary hover:bg-primary-hover text-background font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95 cursor-pointer">
                                     {editingPollId ? 'Cập Nhật Kèo' : 'Lên Bia! 🍻'}
                                 </button>
                             </form>
@@ -870,7 +892,7 @@ const Admin: React.FC = () => {
                                             {/* View Results Button */}
                                             <button
                                                 onClick={() => setViewResultPoll(poll)}
-                                                className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded hover:bg-blue-600/40 font-bold transition-all"
+                                                className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded hover:bg-blue-600/40 font-bold transition-all cursor-pointer"
                                                 title="Xem kết quả"
                                             >
                                                 <Trophy size={14} /> Xem KQ
@@ -878,7 +900,7 @@ const Admin: React.FC = () => {
 
                                             <button
                                                 onClick={() => handleEditClick(poll)}
-                                                className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold"
+                                                className="flex items-center gap-1 text-xs bg-white/10 text-white px-3 py-2 rounded hover:bg-white/20 font-bold cursor-pointer"
                                                 title="Chỉnh sửa (Gia hạn/Sửa lỗi)"
                                             >
                                                 <Edit2 size={14} /> Sửa
@@ -888,7 +910,7 @@ const Admin: React.FC = () => {
                                             <div className="relative group">
                                                 <button
                                                     onClick={() => handleFinalizeClick(poll)}
-                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${isFinalized
+                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all cursor-pointer ${isFinalized
                                                         ? 'bg-yellow-500 text-black hover:bg-yellow-400'
                                                         : 'bg-green-600 text-white hover:bg-green-500'
                                                         } ${finalizingPollId === poll.id ? 'ring-2 ring-white' : ''}`}
@@ -930,10 +952,10 @@ const Admin: React.FC = () => {
                                                         </label>
 
                                                         <div className="flex gap-2">
-                                                            <button onClick={() => submitFinalize(poll.id)} className="flex-1 bg-primary text-background text-xs font-bold py-2 rounded hover:brightness-110">
+                                                            <button onClick={() => submitFinalize(poll.id)} className="flex-1 bg-primary text-background text-xs font-bold py-2 rounded hover:brightness-110 cursor-pointer">
                                                                 Xác nhận
                                                             </button>
-                                                            <button onClick={() => setFinalizingPollId(null)} className="bg-surface border border-border text-xs py-2 px-3 rounded hover:bg-white/10">
+                                                            <button onClick={() => setFinalizingPollId(null)} className="bg-surface border border-border text-xs py-2 px-3 rounded hover:bg-white/10 cursor-pointer">
                                                                 Huỷ
                                                             </button>
                                                         </div>
@@ -945,7 +967,7 @@ const Admin: React.FC = () => {
                                             {isFinalized && (
                                                 <button
                                                     onClick={() => handleToggleHidePoll(poll)}
-                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${poll.isHidden ? 'bg-gray-600 text-white' : 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'}`}
+                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all cursor-pointer ${poll.isHidden ? 'bg-gray-600 text-white' : 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'}`}
                                                     title={poll.isHidden ? "Hiện lại trên Dashboard" : "Ẩn khỏi Dashboard"}
                                                 >
                                                     {poll.isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -957,7 +979,7 @@ const Admin: React.FC = () => {
                                             {isFinalized && !poll.isHidden && (
                                                 <button
                                                     onClick={() => handleReopenPoll(poll)}
-                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all ${confirmReopenId === poll.id
+                                                    className={`flex items-center gap-1 text-xs px-3 py-2 rounded font-bold transition-all cursor-pointer ${confirmReopenId === poll.id
                                                         ? 'bg-orange-600 text-white hover:bg-orange-700'
                                                         : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
                                                         }`}
@@ -970,7 +992,7 @@ const Admin: React.FC = () => {
 
                                             <button
                                                 onClick={() => handleDeletePoll(poll.id)}
-                                                className={`ml-auto p-2 rounded hover:bg-red-500/10 text-secondary hover:text-red-400 transition-all ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : ''}`}
+                                                className={`ml-auto p-2 rounded hover:bg-red-500/10 text-secondary hover:text-red-400 transition-all cursor-pointer ${confirmDeleteId === poll.id ? 'bg-red-600 text-white hover:bg-red-700 w-auto px-3' : ''}`}
                                                 title="Xóa kèo"
                                             >
                                                 {confirmDeleteId === poll.id ? <span className="text-xs font-bold">Xác nhận xóa?</span> : <Trash2 size={16} />}

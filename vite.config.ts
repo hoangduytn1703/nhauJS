@@ -5,8 +5,25 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  base: '/nhauJS/', // Cần thiết để chạy trên GitHub Pages repo nhauJS
+  plugins: [
+    react(), 
+    tailwindcss(),
+    {
+      name: 'redirect-base',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === '/nhaujs') {
+            res.statusCode = 301;
+            res.setHeader('Location', '/nhaujs/');
+            res.end();
+          } else {
+            next();
+          }
+        });
+      }
+    }
+  ],
+  base: '/nhaujs', // Bỏ dấu / ở cuối để linh hoạt hơn
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
