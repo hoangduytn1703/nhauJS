@@ -8,22 +8,8 @@ export default defineConfig({
   plugins: [
     react(), 
     tailwindcss(),
-    {
-      name: 'redirect-base',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url === '/nhaujs') {
-            res.statusCode = 301;
-            res.setHeader('Location', '/nhaujs/');
-            res.end();
-          } else {
-            next();
-          }
-        });
-      }
-    }
   ],
-  base: '/nhaujs/',
+  base: './', // Dùng đường dẫn tương đối để "bất tử" trên GitHub Pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
