@@ -10,8 +10,6 @@ import Leaderboard from '@/pages/leaderboard';
 import BillSplit from '@/pages/bill-split';
 import Members from '@/pages/members';
 
-const BASE_NAME = '/nhaujs';
-
 export const router = createBrowserRouter([
   {
     element: <BaseLayout><Outlet /></BaseLayout>,
@@ -37,7 +35,7 @@ export const router = createBrowserRouter([
         ],
       },
       // Catch all
-      { path: '*', element: <Navigate to={BASE_NAME} replace /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
-], { basename: BASE_NAME });
+]);
