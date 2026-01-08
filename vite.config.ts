@@ -9,7 +9,7 @@ export default defineConfig({
     react(), 
     tailwindcss(),
   ],
-  base: './', // Dùng đường dẫn tương đối để "bất tử" trên GitHub Pages
+  base: '/nhaujs/', // Cấu hình chuẩn cho GitHub Pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

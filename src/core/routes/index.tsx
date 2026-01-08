@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate, Outlet } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 import { BaseLayout } from '@/templates/BaseLayout';
 import { ProtectedRoute, PublicRoute } from './guards';
 import Login from '@/pages/login';
@@ -10,7 +10,7 @@ import Leaderboard from '@/pages/leaderboard';
 import BillSplit from '@/pages/bill-split';
 import Members from '@/pages/members';
 
-export const router = createHashRouter([
+export const router = createBrowserRouter([
   {
     element: <BaseLayout><Outlet /></BaseLayout>,
     children: [
@@ -38,4 +38,4 @@ export const router = createHashRouter([
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
-]);
+], { basename: '/nhaujs' });
