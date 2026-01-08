@@ -23,7 +23,7 @@ export default defineConfig({
       }
     }
   ],
-  base: '/nhaujs',
+  base: '/nhaujs/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
