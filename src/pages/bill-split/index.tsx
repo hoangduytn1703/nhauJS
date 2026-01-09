@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { Poll, User, BillItem, UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy, Car } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
@@ -56,6 +56,7 @@ const BillSplit: React.FC = () => {
     const [userItems, setUserItems] = useState<Record<string, BillItem>>({});
     const [baseAmount, setBaseAmount] = useState<number>(0);
     const [round2Global, setRound2Global] = useState<number>(0);
+    const [totalTaxiAmount, setTotalTaxiAmount] = useState<number>(0);
     const [saving, setSaving] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +93,7 @@ const BillSplit: React.FC = () => {
                         userId: uid,
                         amount: 0,
                         round2Amount: 0,
+                        taxiAmount: 0,
                         isPaid: false
                     };
                 });
@@ -117,6 +119,38 @@ const BillSplit: React.FC = () => {
         });
         setUserItems(newItems);
     }
+
+    const handleApplyTaxiSplit = () => {
+        if (!isAdmin || !selectedPoll) return;
+        
+        // Chỉ những người có đăng ký taxi VÀ được check-in mới bị tính tiền
+        const confirmedVoters = (selectedPoll.taxiVoters || []).filter(uid => 
+            (selectedPoll.confirmedAttendances || []).includes(uid)
+        );
+
+        if (confirmedVoters.length === 0) {
+            alert("Không có ai đăng ký đi taxi mà có mặt tại quán!");
+            return;
+        }
+
+        const perPerson = Math.round(totalTaxiAmount / confirmedVoters.length);
+        const newItems = { ...userItems };
+        
+        // Reset all taxi amounts first
+        Object.keys(newItems).forEach(uid => {
+            newItems[uid].taxiAmount = 0;
+        });
+
+        // Apply new per-person amount to confirmed voters
+        confirmedVoters.forEach(uid => {
+            if (newItems[uid]) {
+                newItems[uid].taxiAmount = perPerson;
+            }
+        });
+        
+        setUserItems(newItems);
+        alert(`Đã chia ${totalTaxiAmount}k cho ${confirmedVoters.length} người có mặt (~${perPerson}k/người)`);
+    };
 
     const handleItemChange = (uid: string, field: keyof BillItem, value: any) => {
         if (!isAdmin) return;
@@ -157,7 +191,7 @@ const BillSplit: React.FC = () => {
         if (!selectedPollId || !isAdmin) return;
         setSaving(true);
         try {
-            const total = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
+            const total = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
             await DataService.updateBill(selectedPollId, {
                 imageUrl: billImage,
                 items: userItems,
@@ -172,11 +206,11 @@ const BillSplit: React.FC = () => {
     };
 
     // Calculate Total for display
-    const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount), 0);
+    const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
 
     // Calculate User's specific amount for QR code
     const currentUserItem = user && userItems[user.id];
-    const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount) * 1000 : 0;
+    const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount + (currentUserItem.taxiAmount || 0)) * 1000 : 0;
 
     // VietQR URL
     const bankBin = "970441"; // VIB
@@ -294,6 +328,19 @@ const BillSplit: React.FC = () => {
                                                         <button onClick={handleApplyRound2Global} className="bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-xs">Apply</button>
                                                     </div>
                                                 </div>
+                                                <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
+                                                    <label className="text-xs text-secondary block mb-1 flex items-center gap-1"><Car size={12}/> Tổng tiền Taxi (Sẽ chia đều cho {selectedPoll.taxiVoters?.length || 0} người)</label>
+                                                    <div className="flex gap-2">
+                                                        <MoneyInput
+                                                            value={totalTaxiAmount}
+                                                            onChange={setTotalTaxiAmount}
+                                                            placeholder="VD: 150"
+                                                        />
+                                                        <button onClick={handleApplyTaxiSplit} className="bg-primary hover:bg-primary-hover text-background px-8 rounded-lg font-bold text-sm flex items-center gap-2">
+                                                            <Calculator size={14}/> Chia Taxi
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </>
@@ -357,6 +404,7 @@ const BillSplit: React.FC = () => {
                                     <th className="px-4 py-3">Thành viên</th>
                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 1 (k)</th>
                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 2 (k)</th>
+                                    <th className="px-4 py-3 w-32 md:w-40 text-right"><span className="flex items-center justify-end gap-1"><Car size={14}/> Taxi</span></th>
                                     <th className="px-4 py-3 text-right">Tổng</th>
                                     <th className="px-4 py-3 text-center">Đã đóng?</th>
                                 </tr>
@@ -389,8 +437,16 @@ const BillSplit: React.FC = () => {
                                                     disabled={!isAdmin}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 text-right font-black text-primary text-lg whitespace-nowrap">
-                                                {(item.amount + item.round2Amount).toLocaleString()} k
+                                            <td className="px-4 py-3">
+                                                <MoneyInput
+                                                    value={item.taxiAmount || 0}
+                                                    onChange={val => handleItemChange(item.userId, 'taxiAmount', val)}
+                                                    disabled={!isAdmin}
+                                                    placeholder={selectedPoll.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-black text-primary text-xl whitespace-nowrap">
+                                                {(item.amount + item.round2Amount + (item.taxiAmount || 0)).toLocaleString()} k
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <div className="flex justify-center">
@@ -407,7 +463,7 @@ const BillSplit: React.FC = () => {
                                     )
                                 })}
                                 <tr className="bg-primary/10">
-                                    <td className="px-4 py-4 font-black text-white text-right uppercase tracking-wider" colSpan={3}>TỔNG THIỆT HẠI:</td>
+                                    <td className="px-4 py-4 font-black text-white text-right uppercase tracking-wider" colSpan={4}>TỔNG THIỆT HẠI:</td>
                                     <td className="px-4 py-4 font-black text-primary text-right text-xl whitespace-nowrap">{grandTotal.toLocaleString()} k</td>
                                     <td></td>
                                 </tr>
