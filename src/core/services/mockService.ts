@@ -456,5 +456,32 @@ export const DataService = {
   getUsers: async (): Promise<User[]> => {
     const snapshot = await getDocs(collection(db, "users"));
     return snapshot.docs.map(doc => doc.data() as User);
+  },
+
+  toggleTaxiVote: async (pollId: string, userId: string): Promise<void> => {
+    const pollRef = doc(db, "polls", pollId);
+    
+    await runTransaction(db, async (transaction) => {
+        const pollDoc = await transaction.get(pollRef);
+        if (!pollDoc.exists()) throw "Poll not found";
+        
+        const pollData = pollDoc.data() as Poll;
+        if (!pollData.enableTaxi) throw "Tính năng taxi không bật";
+
+        // Logic check: Phải vote đủ giờ và quán mới được vote taxi
+        const votedLoc = pollData.options.some(o => o.votes.includes(userId));
+        const votedTime = (pollData.timeOptions || []).some(t => t.votes.includes(userId));
+
+        if (!votedLoc || !votedTime) {
+            throw new Error("Bạn phải bình chọn Địa điểm và Thời gian trước khi đăng ký Taxi!");
+        }
+
+        const taxiVoters = pollData.taxiVoters || [];
+        if (taxiVoters.includes(userId)) {
+            transaction.update(pollRef, { taxiVoters: arrayRemove(userId) });
+        } else {
+            transaction.update(pollRef, { taxiVoters: arrayUnion(userId) });
+        }
+    });
   }
 };

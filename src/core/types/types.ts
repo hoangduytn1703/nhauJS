@@ -44,6 +44,7 @@ export interface BillItem {
   userId: string;
   amount: number; // Tiền tăng 1 (chia đều hoặc lẻ)
   round2Amount: number; // Tiền tăng 2
+  taxiAmount?: number; // Tiền taxi
   isPaid: boolean;
 }
 
@@ -81,6 +82,10 @@ export interface Poll {
   
   // Bill Split Feature
   bill?: BillInfo;
+
+  // Taxi Feature
+  enableTaxi?: boolean;
+  taxiVoters?: string[];
 }
 
 export interface DrinkStats {

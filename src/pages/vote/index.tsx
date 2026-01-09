@@ -2,7 +2,7 @@ import React,{ useEffect,useState } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { Poll,User,PollOption } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Clock,TrendingUp,ThumbsUp,Beer,MapPin,CheckSquare,AlertCircle,XCircle,CheckCircle,RefreshCcw,Calendar,ArrowUp,Star,Award,ExternalLink,Plus,Users,User as UserIcon,StickyNote,ShieldAlert } from 'lucide-react';
+import { Clock,TrendingUp,ThumbsUp,Beer,MapPin,CheckSquare,AlertCircle,XCircle,CheckCircle,RefreshCcw,Calendar,ArrowUp,Star,Award,ExternalLink,Plus,Users,User as UserIcon,StickyNote,ShieldAlert,Car,CarFront } from 'lucide-react';
 import { Link } from 'react-router';
 import { PollResultModal } from '@/components/PollResultModal';
 
@@ -173,6 +173,19 @@ const Vote: React.FC = () => {
       setPolls(updatedPolls.filter(p => !p.isHidden));
     } catch (error: any) {
       alert(error.message || 'Lỗi khi vote');
+    }
+  };
+
+  const handleTaxiVote = async (pollId: string) => {
+    if (!user) return;
+    const poll = polls.find(p => p.id === pollId);
+    if (poll && isPollEnded(poll)) return; // Không cho vote khi đã chốt
+    
+    try {
+      await DataService.toggleTaxiVote(pollId,user.id);
+      fetchData();
+    } catch (e: any) {
+      alert(e.message || "Lỗi khi đăng ký taxi");
     }
   };
 
@@ -774,6 +787,57 @@ const Vote: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* --- PART C: TAXI REGISTRATION (NEW) --- */}
+                {poll.enableTaxi && (
+                  <div className="bg-surface/50 border border-border p-6 rounded-2xl animate-in slide-in-from-bottom-4 mt-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                      <div>
+                        <h4 className="text-xl font-bold text-white flex items-center gap-2">
+                          <Car className="text-primary" size={24} /> Đăng ký đi Taxi 🚕
+                        </h4>
+                        <p className="text-sm text-secondary mt-1">An toàn là trên hết! Đăng ký đi taxi để anh em sắp xếp.</p>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={() => openVotersModal("Danh sách đi Taxi 🚕",poll.taxiVoters || [])}>
+                        <div className="flex -space-x-1">
+                          {(poll.taxiVoters || []).slice(0,3).map(uid => (
+                            <img key={uid} src={getVoterInfo(uid).avatar} className="w-6 h-6 rounded-full border border-surface bg-background" />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-primary hover:underline cursor-pointer">
+                          {(poll.taxiVoters || []).length} người đăng ký
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-background/40 p-4 rounded-xl border border-border/50">
+                        <p className="text-xs text-secondary mb-3">Điều kiện: Phải hoàn thành bình chọn Địa điểm và Thời gian.</p>
+                        <button
+                          onClick={() => handleTaxiVote(poll.id)}
+                          disabled={isAdmin || ended}
+                          className={`w-full py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 ${
+                            (poll.taxiVoters || []).includes(user?.id || '')
+                              ? 'bg-primary text-background hover:bg-primary-hover shadow-[0_0_20px_rgba(244,140,37,0.3)]'
+                              : 'bg-surface border border-border text-white hover:border-primary hover:text-primary'
+                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {(poll.taxiVoters || []).includes(user?.id || '') ? (
+                            <><CarFront size={20} /> {(ended) ? 'ĐÃ ĐĂNG KÝ TAXI' : 'ĐÃ ĐĂNG KÝ TAXI (Bấm để hủy)'}</>
+                          ) : (
+                            <><CarFront size={20} /> {ended ? 'KHÔNG ĐĂNG KÝ' : 'TÔI SẼ ĐI TAXI'}</>
+                          )}
+                        </button>
+                      </div>
+                      
+                      <div className="p-4 flex items-center justify-center border border-dashed border-border rounded-xl opacity-60">
+                         <div className="text-center">
+                            <p className="text-xs text-secondary">"Bảo vệ bản thân, bảo vệ túi tiền...<br/>vì bùng kèo taxi cũng bị phạt (đùa đấy)"</p>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

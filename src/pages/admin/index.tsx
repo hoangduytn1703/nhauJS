@@ -31,6 +31,7 @@ const Admin: React.FC = () => {
     const [allowMultiple, setAllowMultiple] = useState(false);
     const [deadlineDate, setDeadlineDate] = useState<string>(''); // YYYY-MM-DD
     const [resultDate, setResultDate] = useState<string>(''); // YYYY-MM-DD
+    const [enableTaxi, setEnableTaxi] = useState(false);
 
     // Location Options State
     const [pollOptions, setPollOptions] = useState<{ id?: string, text: string, description: string, notes: string, image?: string, createdBy?: string, votes?: string[] }[]>([
@@ -139,6 +140,7 @@ const Admin: React.FC = () => {
         setAllowMultiple(poll.allowMultipleVotes || false);
         setDeadlineDate(toInputDate(poll.deadline));
         setResultDate(toInputDate(poll.resultDate));
+        setEnableTaxi(poll.enableTaxi || false);
 
         const formOptions = poll.options.map(o => ({
             id: o.id,
@@ -180,6 +182,7 @@ const Admin: React.FC = () => {
         setAllowMultiple(false);
         setDeadlineDate('');
         setResultDate('');
+        setEnableTaxi(false);
         setPollOptions([{ text: '', description: '', notes: '', image: '' }, { text: '', description: '', notes: '', image: '' }]);
         setTimeOptions([{ text: '' }, { text: '' }]);
         setSelectedFinalTime('');
@@ -209,6 +212,7 @@ const Admin: React.FC = () => {
             allowMultipleVotes: allowMultiple,
             deadline: createFixedTimestamp(deadlineDate),
             resultDate: createFixedTimestamp(resultDate),
+            enableTaxi: enableTaxi,
             status: 'OPEN' as const,
             createdBy: user.id,
             isHidden: false,
@@ -742,6 +746,16 @@ const Admin: React.FC = () => {
                                         <div>
                                             <div className="text-sm font-bold text-white">Cho phép chọn nhiều</div>
                                             <div className="text-xs text-secondary">Người dùng có thể vote nhiều quán/ngày cùng lúc</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border cursor-pointer" onClick={() => setEnableTaxi(!enableTaxi)}>
+                                        <div className={`w-10 h-6 rounded-full p-1 transition-colors ${enableTaxi ? 'bg-primary' : 'bg-surface border border-secondary'}`}>
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${enableTaxi ? 'translate-x-4' : ''}`}></div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-white">Tính năng Taxi 🚕</div>
+                                            <div className="text-xs text-secondary">Hỏi xem ai sẽ đi taxi tới quán</div>
                                         </div>
                                     </div>
                                 </div>
