@@ -330,6 +330,29 @@ const BillSplit: React.FC = () => {
         });
     };
 
+    const handleToggleAllPaid = (paid: boolean) => {
+        if (!isAdmin) return;
+        if (!checkDirtyWarning()) return;
+
+        setUserItems(prev => {
+            const next = { ...prev };
+            const visibleIds = (Object.values(prev) as BillItem[])
+                .filter(item => {
+                    const u = getDisplayUser(item.userId);
+                    const search = searchTerm.toLowerCase();
+                    return u.nickname.toLowerCase().includes(search) ||
+                           (u.name || '').toLowerCase().includes(search) ||
+                           (u.email || '').toLowerCase().includes(search);
+                })
+                .map(item => item.userId);
+
+            visibleIds.forEach(uid => {
+                next[uid] = { ...next[uid], isPaid: paid };
+            });
+            return next;
+        });
+    };
+
     const toggleAutoBalance = (uid: string) => {
         if (!checkDirtyWarning()) return;
         setAutoBalanceMap(prev => ({
@@ -637,19 +660,71 @@ const BillSplit: React.FC = () => {
                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 2 (đ)</th>
                                     <th className="px-4 py-3 w-32 md:w-40 text-right"><span className="flex items-center justify-end gap-1"><Car size={14} /> Taxi</span></th>
                                     <th className="px-4 py-3 text-right">Tổng</th>
-                                    <th
-                                        className="px-4 py-3 text-center cursor-pointer hover:bg-white/5 transition-colors select-none"
-                                        onClick={() => {
-                                            setSortMode(prev => {
-                                                if (prev === 'NONE') return 'UNPAID';
-                                                if (prev === 'UNPAID') return 'PAID';
-                                                return 'NONE';
-                                            });
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-center gap-1">
-                                            Đã đóng?
-                                            <ArrowUpDown size={12} className={sortMode !== 'NONE' ? 'text-primary animate-pulse' : 'text-secondary/50'} />
+                                    <th className="px-4 py-3 text-center select-none">
+                                        <div className="flex flex-col items-center gap-1">
+                                            {isAdmin && (
+                                                <div 
+                                                    className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors mb-1 border-b border-white/10 pb-1"
+                                                    onClick={() => {
+                                                        const visibleItems = (Object.values(userItems) as BillItem[])
+                                                            .filter(item => {
+                                                                const u = getDisplayUser(item.userId);
+                                                                const search = searchTerm.toLowerCase();
+                                                                return u.nickname.toLowerCase().includes(search) ||
+                                                                    (u.name || '').toLowerCase().includes(search) ||
+                                                                    (u.email || '').toLowerCase().includes(search);
+                                                            });
+                                                        const allPaid = visibleItems.length > 0 && visibleItems.every(i => i.isPaid);
+                                                        handleToggleAllPaid(!allPaid);
+                                                    }}
+                                                >
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                                        (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).every(i => i.isPaid) && (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).length > 0
+                                                        ? 'bg-primary border-primary text-black' 
+                                                        : 'bg-transparent border-white/30'
+                                                    }`}>
+                                                        {(Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).every(i => i.isPaid) && (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).length > 0 && <Check size={12} strokeWidth={4} />}
+                                                    </div>
+                                                    <span className="text-[10px]">All</span>
+                                                </div>
+                                            )}
+                                            <div 
+                                                className="flex items-center justify-center gap-1 cursor-pointer hover:text-white transition-colors"
+                                                onClick={() => {
+                                                    setSortMode(prev => {
+                                                        if (prev === 'NONE') return 'UNPAID';
+                                                        if (prev === 'UNPAID') return 'PAID';
+                                                        return 'NONE';
+                                                    });
+                                                }}
+                                            >
+                                                Đã đóng?
+                                                <ArrowUpDown size={12} className={sortMode !== 'NONE' ? 'text-primary animate-pulse' : 'text-secondary/50'} />
+                                            </div>
                                         </div>
                                     </th>
                                 </tr>
