@@ -54,7 +54,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
-            <div className="bg-surface border border-border rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <div className="bg-surface border border-border rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative" onClick={e => e.stopPropagation()}>
 
                 <button
                     onClick={onClose}
@@ -165,13 +165,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                             {onToggleNonDrinker && (
                                                                 <button
                                                                     onClick={() => onToggleNonDrinker(item.poll.id, user.id)}
-                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isNonDrinker
+                                                                    className={`cursor-pointer px-2 py-1 rounded-[4px] text-[10px] font-bold transition-all flex items-center gap-1 border shrink-0 ${item.isNonDrinker
                                                                         ? 'bg-secondary border-secondary text-white'
                                                                         : 'bg-primary border-primary text-background hover:bg-primary-hover shadow-[0_0_10px_rgba(244,140,37,0.2)]'
                                                                         }`}
                                                                     title={item.isNonDrinker ? "Chuyển sang CÓ NHẬU" : "Chuyển sang KHÔNG NHẬU"}
                                                                 >
-                                                                    {item.isNonDrinker ? <BeerOff size={12} /> : <Beer size={12} />}
+                                                                    {item.isNonDrinker ? <BeerOff size={10} /> : <Beer size={10} />}
                                                                     {item.isNonDrinker ? 'Ko Uống' : 'Có Uống'}
                                                                 </button>
                                                             )}
@@ -181,13 +181,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                                 onClick={() => {
                                                                     if (!item.isAttended) onToggleAttendance(item.poll.id, user.id);
                                                                 }}
-                                                                className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isAttended
+                                                                className={`cursor-pointer px-2 py-1 rounded-[4px] text-[10px] font-bold transition-all flex items-center gap-1 border shrink-0 ${item.isAttended
                                                                     ? 'bg-green-600 border-green-600 text-white cursor-default'
                                                                     : 'bg-surface border-border text-secondary hover:bg-green-500/10 hover:border-green-500 hover:text-green-500'
                                                                     }`}
                                                                 title="Xác nhận có mặt"
                                                             >
-                                                                {item.isAttended && <CheckCircle size={12} />} Check-in
+                                                                {item.isAttended && <CheckCircle size={10} />} Check-in
                                                             </button>
 
                                                             {/* Flake Button (Red) - Only if Joined */}
@@ -196,13 +196,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                                     onClick={() => {
                                                                         onToggleFlake(item.poll.id, user.id);
                                                                     }}
-                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isFlaked
+                                                                    className={`cursor-pointer px-2 py-1 rounded-[4px] text-[10px] font-bold transition-all flex items-center gap-1 border shrink-0 ${item.isFlaked
                                                                         ? 'bg-red-600 border-red-600 text-white cursor-pointer hover:bg-red-700'
                                                                         : 'bg-surface border-border text-secondary hover:bg-red-500/10 hover:border-red-500 hover:text-red-500'
                                                                         }`}
                                                                     title={item.isFlaked ? "Hủy phạt bùng" : "Xác nhận bùng kèo (Phạt)"}
                                                                 >
-                                                                    {item.isFlaked ? <UserX size={12} /> : <UserX size={12} />} {item.isFlaked ? 'Đã Bùng' : 'Bùng'}
+                                                                    <UserX size={10} /> {item.isFlaked ? 'Đã Bùng' : 'Bùng'}
                                                                 </button>
                                                             )}
                                                         </div>

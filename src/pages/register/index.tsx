@@ -103,7 +103,7 @@ const Register: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? 'Đang đăng ký...' : 'Lên Bia! 🍺'}
           </button>

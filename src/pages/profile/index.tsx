@@ -245,7 +245,7 @@ const Profile: React.FC = () => {
                             />
                             <button
                                 onClick={handleAddCustomTag}
-                                className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm font-bold"
+                                className="bg-surface border border-dashed border-secondary text-secondary hover:text-white hover:border-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm font-bold cursor-pointer"
                             >
                                 <Plus size={16} /> Thêm
                             </button>
@@ -256,7 +256,7 @@ const Profile: React.FC = () => {
                                 <button
                                     key={drink}
                                     onClick={() => toggleDrink(drink)}
-                                    className={`px-4 py-2 rounded-full border transition-all text-sm text-left ${formData.favoriteDrinks?.includes(drink)
+                                    className={`px-4 py-2 rounded-full border transition-all text-sm text-left cursor-pointer ${formData.favoriteDrinks?.includes(drink)
                                         ? 'bg-primary text-background font-bold border-primary'
                                         : 'bg-surface text-secondary border-border hover:border-primary'
                                         }`}
@@ -270,7 +270,7 @@ const Profile: React.FC = () => {
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="h-12 bg-primary hover:bg-primary-hover text-background font-bold rounded-full transition-all flex items-center justify-center gap-2 shadow-lg"
+                        className="h-12 bg-primary hover:bg-primary-hover text-background font-bold rounded-full transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                     >
                         <Save size={20} /> {saving ? 'Đang lưu...' : 'Lưu Hồ Sơ'}
                     </button>

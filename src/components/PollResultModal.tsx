@@ -137,9 +137,14 @@ export const PollResultModal: React.FC<PollResultModalProps> = ({ poll, users, o
                                         return (
                                             <div key={uid} className="flex items-center gap-3 bg-surface p-3 rounded-xl border border-border">
                                                 <img src={u.avatar} className="w-10 h-10 rounded-full object-cover border border-secondary/30" />
-                                                <div className="min-w-0">
+                                                <div className="min-w-0 flex-1">
                                                     <div className="font-bold text-white text-sm truncate uppercase">{u.name}</div>
-                                                    <div className="text-xs text-primary font-bold truncate">{u.nickname}</div>
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <div className="text-xs text-primary font-bold truncate">{u.nickname}</div>
+                                                        {poll.participants?.[uid]?.isNonDrinker && (
+                                                            <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1 rounded border border-orange-500/30 font-bold shrink-0">Ko nhậu</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );

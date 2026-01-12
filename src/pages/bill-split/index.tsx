@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React,{ useState,useEffect,useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
-import { Poll, User, BillItem, UserRole } from '@/core/types/types';
+import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy, Car, RefreshCw, Search, Check, ArrowUpDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown } from 'lucide-react';
+import { Link,useNavigate } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
 const MoneyInput: React.FC<{
@@ -11,13 +11,13 @@ const MoneyInput: React.FC<{
     onChange: (val: number) => void;
     disabled?: boolean;
     placeholder?: string;
-}> = ({ value, onChange, disabled, placeholder }) => {
+}> = ({ value,onChange,disabled,placeholder }) => {
     // Format on render: 12000 -> "12,000"
     const displayValue = value === 0 ? '' : value.toLocaleString('en-US');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Remove commas to get raw number
-        const raw = e.target.value.replace(/,/g, '');
+        const raw = e.target.value.replace(/,/g,'');
         // Allow digits only
         if (!/^\d*$/.test(raw)) return;
 
@@ -44,38 +44,38 @@ const MoneyInput: React.FC<{
 const BillSplit: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [polls, setPolls] = useState<Poll[]>([]);
-    const [users, setUsers] = useState<Record<string, User>>({});
+    const [polls,setPolls] = useState<Poll[]>([]);
+    const [users,setUsers] = useState<Record<string,User>>({});
 
     // Selection state
-    const [selectedPollId, setSelectedPollId] = useState<string>('');
+    const [selectedPollId,setSelectedPollId] = useState<string>('');
     const selectedPoll = polls.find(p => p.id === selectedPollId);
 
     // Bill State
-    const [billImage, setBillImage] = useState<string>('');
-    const [userItems, setUserItems] = useState<Record<string, BillItem>>({});
-    const [baseAmount, setBaseAmount] = useState<number>(0);
-    const [baseAmountBeer, setBaseAmountBeer] = useState<number>(0);
-    const baseAmountFood = Math.max(0, baseAmount - baseAmountBeer);
+    const [billImage,setBillImage] = useState<string>('');
+    const [userItems,setUserItems] = useState<Record<string,BillItem>>({});
+    const [baseAmount,setBaseAmount] = useState<number>(0);
+    const [baseAmountBeer,setBaseAmountBeer] = useState<number>(0);
+    const baseAmountFood = Math.max(0,baseAmount - baseAmountBeer);
 
-    const [round2Global, setRound2Global] = useState<number>(0);
-    const [round2AmountBeer, setRound2AmountBeer] = useState<number>(0);
-    const round2AmountFood = Math.max(0, round2Global - round2AmountBeer);
+    const [round2Global,setRound2Global] = useState<number>(0);
+    const [round2AmountBeer,setRound2AmountBeer] = useState<number>(0);
+    const round2AmountFood = Math.max(0,round2Global - round2AmountBeer);
 
-    const [totalTaxiAmount, setTotalTaxiAmount] = useState<number>(0);
-    const [saving, setSaving] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
+    const [totalTaxiAmount,setTotalTaxiAmount] = useState<number>(0);
+    const [saving,setSaving] = useState(false);
+    const [refreshing,setRefreshing] = useState(false);
 
     // Track if auto-split has been triggered
-    const [hasAppliedBase, setHasAppliedBase] = useState(false);
-    const [hasAppliedRound2, setHasAppliedRound2] = useState(false);
+    const [hasAppliedBase,setHasAppliedBase] = useState(false);
+    const [hasAppliedRound2,setHasAppliedRound2] = useState(false);
 
     // New: Map of which users should be automatically re-balanced
-    const [autoBalanceMap, setAutoBalanceMap] = useState<Record<string, boolean>>({});
+    const [autoBalanceMap,setAutoBalanceMap] = useState<Record<string,boolean>>({});
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [sortMode, setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
-    const [isDirty, setIsDirty] = useState(false);
+    const [searchTerm,setSearchTerm] = useState('');
+    const [sortMode,setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
+    const [isDirty,setIsDirty] = useState(false);
 
     // Helper to round up to nearest 1,000
     const roundToThousand = (val: number) => Math.ceil(val / 1000) * 1000;
@@ -83,7 +83,7 @@ const BillSplit: React.FC = () => {
     const checkDirtyWarning = () => {
         if (!isAdmin) return true;
         if (isDirty) return true;
-        
+
         if (selectedPoll?.bill) {
             const ok = window.confirm("Bạn đang chỉnh sửa bill đã tồn tại. Thay đổi này sẽ ảnh hưởng đến số dư của mọi người. Tiếp tục?");
             if (ok) {
@@ -92,7 +92,7 @@ const BillSplit: React.FC = () => {
             }
             return false;
         }
-        
+
         setIsDirty(true);
         return true;
     };
@@ -103,23 +103,23 @@ const BillSplit: React.FC = () => {
 
     useEffect(() => {
         refreshData();
-    }, []);
+    },[]);
 
     const refreshData = async () => {
         setRefreshing(true);
         try {
-            const [allPolls, allUsers] = await Promise.all([
+            const [allPolls,allUsers] = await Promise.all([
                 DataService.getPolls(),
                 DataService.getUsers()
             ]);
             const finishedPolls = allPolls.filter(p => (p.deadline > 0 && Date.now() > p.deadline) || !!p.finalizedOptionId || !!p.finalizedTimeId);
             setPolls(finishedPolls);
 
-            const userMap: Record<string, User> = {};
+            const userMap: Record<string,User> = {};
             allUsers.forEach(u => userMap[u.id] = u);
             setUsers(userMap);
         } catch (e) {
-            console.error("Refresh failed", e);
+            console.error("Refresh failed",e);
         } finally {
             setRefreshing(false);
         }
@@ -129,7 +129,7 @@ const BillSplit: React.FC = () => {
     useEffect(() => {
         if (selectedPoll) {
             const confirmedIds = selectedPoll.confirmedAttendances || [];
-            
+
             if (selectedPoll.bill) {
                 setBillImage(selectedPoll.bill.imageUrl || '');
                 setBaseAmount(selectedPoll.bill.baseAmount || 0);
@@ -137,11 +137,11 @@ const BillSplit: React.FC = () => {
                 setRound2Global(selectedPoll.bill.round2Amount || 0);
                 setRound2AmountBeer(selectedPoll.bill.round2AmountBeer || 0);
                 setTotalTaxiAmount(selectedPoll.bill.totalTaxiAmount || 0);
-                
+
                 // Merge logic: Start with saved items, but add missing confirmed users
                 const existingItems = { ...selectedPoll.bill.items };
                 let modified = false;
-                
+
                 confirmedIds.forEach(uid => {
                     if (!existingItems[uid]) {
                         existingItems[uid] = {
@@ -154,7 +154,7 @@ const BillSplit: React.FC = () => {
                         modified = true;
                     }
                 });
-                
+
                 setUserItems(existingItems);
             } else {
                 setBillImage('');
@@ -162,7 +162,7 @@ const BillSplit: React.FC = () => {
                 setRound2Global(0);
                 setTotalTaxiAmount(0);
                 // Init new bill from confirmed users
-                const initialItems: Record<string, BillItem> = {};
+                const initialItems: Record<string,BillItem> = {};
                 confirmedIds.forEach(uid => {
                     initialItems[uid] = {
                         userId: uid,
@@ -175,7 +175,7 @@ const BillSplit: React.FC = () => {
                 setUserItems(initialItems);
             }
         }
-    }, [selectedPoll]);
+    },[selectedPoll]);
 
     const handleApplyBaseAmount = () => {
         if (!isAdmin || !selectedPoll) return;
@@ -189,7 +189,7 @@ const BillSplit: React.FC = () => {
         const perPersonBeer = drinkers.length > 0 ? roundToThousand(baseAmountBeer / drinkers.length) : 0;
 
         const newItems = { ...userItems };
-        const newAutoMap: Record<string, boolean> = {};
+        const newAutoMap: Record<string,boolean> = {};
         userIds.forEach(uid => {
             const isNonDrinker = !!selectedPoll.participants?.[uid]?.isNonDrinker;
             newItems[uid].amount = perPersonFood + (isNonDrinker ? 0 : perPersonBeer);
@@ -213,7 +213,7 @@ const BillSplit: React.FC = () => {
         const perPersonBeer = drinkers.length > 0 ? roundToThousand(round2AmountBeer / drinkers.length) : 0;
 
         const newItems = { ...userItems };
-        const newAutoMap: Record<string, boolean> = { ...autoBalanceMap };
+        const newAutoMap: Record<string,boolean> = { ...autoBalanceMap };
         userIds.forEach(uid => {
             const isNonDrinker = !!selectedPoll.participants?.[uid]?.isNonDrinker;
             newItems[uid].round2Amount = perPersonFood + (isNonDrinker ? 0 : perPersonBeer);
@@ -228,9 +228,9 @@ const BillSplit: React.FC = () => {
     const handleApplyTaxiSplit = () => {
         if (!isAdmin || !selectedPoll) return;
         if (!checkDirtyWarning()) return;
-        
+
         // Chỉ những người có đăng ký taxi VÀ được check-in mới bị tính tiền
-        const confirmedVoters = (selectedPoll.taxiVoters || []).filter(uid => 
+        const confirmedVoters = (selectedPoll.taxiVoters || []).filter(uid =>
             (selectedPoll.confirmedAttendances || []).includes(uid)
         );
 
@@ -241,7 +241,7 @@ const BillSplit: React.FC = () => {
 
         const perPerson = roundToThousand(totalTaxiAmount / confirmedVoters.length);
         const newItems = { ...userItems };
-        
+
         // Reset all taxi amounts first
         Object.keys(newItems).forEach(uid => {
             newItems[uid].taxiAmount = 0;
@@ -253,18 +253,18 @@ const BillSplit: React.FC = () => {
                 newItems[uid].taxiAmount = perPerson;
             }
         });
-        
+
         setUserItems(newItems);
         alert(`Đã chia ${totalTaxiAmount.toLocaleString()}đ cho ${confirmedVoters.length} người có mặt (~${perPerson.toLocaleString()}đ/người)`);
     };
 
-    const handleItemChange = (uid: string, field: keyof BillItem, value: any) => {
+    const handleItemChange = (uid: string,field: keyof BillItem,value: any) => {
         if (!isAdmin) return;
         if (!checkDirtyWarning()) return;
-        
+
         setUserItems(prev => {
             const next = { ...prev };
-            next[uid] = { ...next[uid], [field]: value };
+            next[uid] = { ...next[uid],[field]: value };
 
             // Update AutoBalanceMap: if manually changing amount, lock this user
             const currentAutoMap = { ...autoBalanceMap };
@@ -276,7 +276,7 @@ const BillSplit: React.FC = () => {
             // SMART RE-BALANCING with Locking
             if (field === 'amount' && hasAppliedBase && baseAmount > 0) {
                 const autoIds = Object.keys(next).filter(id => currentAutoMap[id] && id !== uid);
-                
+
                 if (autoIds.length > 0) {
                     const autoDrinkers = autoIds.filter(id => !selectedPoll?.participants?.[id]?.isNonDrinker);
                     const autoNonDrinkers = autoIds.filter(id => !!selectedPoll?.participants?.[id]?.isNonDrinker);
@@ -288,22 +288,22 @@ const BillSplit: React.FC = () => {
 
                     const fixedSum = Object.keys(next)
                         .filter(id => !currentAutoMap[id])
-                        .reduce((sum, id) => sum + (next[id].amount || 0), 0);
-                    
-                    const staticSum = staticIds.reduce((sum, id) => sum + (next[id].amount || 0), 0);
-                    
+                        .reduce((sum,id) => sum + (next[id].amount || 0),0);
+
+                    const staticSum = staticIds.reduce((sum,id) => sum + (next[id].amount || 0),0);
+
                     const remaining = baseAmount - fixedSum - staticSum;
-                    const perPerson = Math.max(0, roundToThousand(remaining / priorityIds.length));
-                    
+                    const perPerson = Math.max(0,roundToThousand(remaining / priorityIds.length));
+
                     priorityIds.forEach(id => {
-                        next[id] = { ...next[id], amount: perPerson };
+                        next[id] = { ...next[id],amount: perPerson };
                     });
                 }
             }
 
             if (field === 'round2Amount' && hasAppliedRound2 && round2Global > 0) {
                 const autoIds = Object.keys(next).filter(id => currentAutoMap[id] && id !== uid);
-                
+
                 if (autoIds.length > 0) {
                     const autoDrinkers = autoIds.filter(id => !selectedPoll?.participants?.[id]?.isNonDrinker);
                     const autoNonDrinkers = autoIds.filter(id => !!selectedPoll?.participants?.[id]?.isNonDrinker);
@@ -313,19 +313,42 @@ const BillSplit: React.FC = () => {
 
                     const fixedSum = Object.keys(next)
                         .filter(id => !currentAutoMap[id])
-                        .reduce((sum, id) => sum + (next[id].round2Amount || 0), 0);
-                    
-                    const staticSum = staticIds.reduce((sum, id) => sum + (next[id].round2Amount || 0), 0);
+                        .reduce((sum,id) => sum + (next[id].round2Amount || 0),0);
+
+                    const staticSum = staticIds.reduce((sum,id) => sum + (next[id].round2Amount || 0),0);
 
                     const remaining = round2Global - fixedSum - staticSum;
-                    const perPerson = Math.max(0, roundToThousand(remaining / priorityIds.length));
-                    
+                    const perPerson = Math.max(0,roundToThousand(remaining / priorityIds.length));
+
                     priorityIds.forEach(id => {
-                        next[id] = { ...next[id], round2Amount: perPerson };
+                        next[id] = { ...next[id],round2Amount: perPerson };
                     });
                 }
             }
 
+            return next;
+        });
+    };
+
+    const handleToggleAllPaid = (paid: boolean) => {
+        if (!isAdmin) return;
+        if (!checkDirtyWarning()) return;
+
+        setUserItems(prev => {
+            const next = { ...prev };
+            const visibleIds = (Object.values(prev) as BillItem[])
+                .filter(item => {
+                    const u = getDisplayUser(item.userId);
+                    const search = searchTerm.toLowerCase();
+                    return u.nickname.toLowerCase().includes(search) ||
+                           (u.name || '').toLowerCase().includes(search) ||
+                           (u.email || '').toLowerCase().includes(search);
+                })
+                .map(item => item.userId);
+
+            visibleIds.forEach(uid => {
+                next[uid] = { ...next[uid], isPaid: paid };
+            });
             return next;
         });
     };
@@ -355,8 +378,8 @@ const BillSplit: React.FC = () => {
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
                 const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                setBillImage(canvas.toDataURL('image/jpeg', 0.8));
+                ctx?.drawImage(img,0,0,canvas.width,canvas.height);
+                setBillImage(canvas.toDataURL('image/jpeg',0.8));
             };
             img.src = readerEvent.target?.result as string;
         };
@@ -367,8 +390,8 @@ const BillSplit: React.FC = () => {
         if (!selectedPollId || !isAdmin) return;
         setSaving(true);
         try {
-            const total = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
-            await DataService.updateBill(selectedPollId, {
+            const total = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
+            await DataService.updateBill(selectedPollId,{
                 imageUrl: billImage,
                 items: userItems,
                 totalAmount: total,
@@ -390,7 +413,7 @@ const BillSplit: React.FC = () => {
     };
 
     // Calculate Total for display
-    const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
+    const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
 
     // Calculate User's specific amount for QR code
     const currentUserItem = user && userItems[user.id];
@@ -435,7 +458,7 @@ const BillSplit: React.FC = () => {
                             <button
                                 key={p.id}
                                 onClick={() => setSelectedPollId(p.id)}
-                                className="text-left bg-background border border-border p-4 rounded-xl hover:border-primary transition-colors flex justify-between items-center group"
+                                className="text-left bg-background border border-border p-4 rounded-xl hover:border-primary transition-colors flex justify-between items-center group cursor-pointer"
                             >
                                 <div>
                                     <div className="font-bold text-white group-hover:text-primary transition-colors">{p.title}</div>
@@ -446,11 +469,11 @@ const BillSplit: React.FC = () => {
                         ))}
                     </div>
                     {polls.length === 0 && <p className="text-secondary italic">Chưa có kèo nào đã kết thúc.</p>}
-                    
-                    <button 
-                        onClick={refreshData} 
+
+                    <button
+                        onClick={refreshData}
                         disabled={refreshing}
-                        className="mt-6 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-secondary hover:text-white transition-all flex items-center justify-center gap-2 text-sm"
+                        className="mt-6 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-secondary hover:text-white transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
                     >
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                         {refreshing ? 'Đang cập nhật...' : 'Cập nhật danh sách mới nhất'}
@@ -459,7 +482,7 @@ const BillSplit: React.FC = () => {
             ) : (
                 <div className="flex flex-col gap-6 animate-in slide-in-from-right-4">
                     <div className="flex justify-between items-center">
-                        <button onClick={() => setSelectedPollId('')} className="text-secondary text-sm hover:underline">← Chọn kèo khác</button>
+                    <button onClick={() => setSelectedPollId('')} className="text-secondary text-sm hover:underline cursor-pointer">← Chọn kèo khác</button>
                         {!isAdmin && (
                             <span className="text-xs text-secondary bg-surface px-3 py-1 rounded-full border border-border flex items-center gap-1">
                                 <Lock size={12} /> Chế độ xem (Chỉ Admin được sửa)
@@ -496,7 +519,7 @@ const BillSplit: React.FC = () => {
                                 {isAdmin ? (
                                     <>
                                         <p className="text-secondary text-sm mb-4">Upload ảnh bill để anh em tiện đối chiếu nếu cần thắc mắc.</p>
-                                    <div className="bg-background p-4 rounded-xl border border-border">
+                                        <div className="bg-background p-4 rounded-xl border border-border">
                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Calculator size={16} /> Công cụ chia nhanh</h4>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="bg-background/50 p-3 rounded-lg border border-border/50">
@@ -516,7 +539,7 @@ const BillSplit: React.FC = () => {
                                                                 <input disabled value={baseAmountFood.toLocaleString()} className="w-full bg-background/30 border border-border/50 rounded-lg px-3 py-2 text-white font-mono text-right opacity-50" />
                                                             </div>
                                                         </div>
-                                                        <button onClick={handleApplyBaseAmount} className="w-full bg-primary hover:bg-primary-hover text-background py-2 rounded-lg font-black text-xs uppercase tracking-tighter">Áp dụng</button>
+                                                        <button onClick={handleApplyBaseAmount} className="w-full bg-primary hover:bg-primary-hover text-background py-2 rounded-lg font-black text-xs uppercase tracking-tighter cursor-pointer">Áp dụng</button>
                                                     </div>
                                                 </div>
                                                 <div className="bg-background/50 p-3 rounded-lg border border-border/50">
@@ -536,11 +559,11 @@ const BillSplit: React.FC = () => {
                                                                 <input disabled value={round2AmountFood.toLocaleString()} className="w-full bg-background/30 border border-border/50 rounded-lg px-3 py-2 text-white font-mono text-right opacity-50" />
                                                             </div>
                                                         </div>
-                                                        <button onClick={handleApplyRound2Global} className="w-full bg-primary hover:bg-primary-hover text-background py-2 rounded-lg font-black text-xs uppercase tracking-tighter">Áp dụng</button>
+                                                        <button onClick={handleApplyRound2Global} className="w-full bg-primary hover:bg-primary-hover text-background py-2 rounded-lg font-black text-xs uppercase tracking-tighter cursor-pointer">Áp dụng</button>
                                                     </div>
                                                 </div>
                                                 <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
-                                                    <label className="text-xs text-secondary block mb-1 flex items-center gap-1"><Car size={12}/> Tổng tiền Taxi (Sẽ chia đều cho những người có mặt trong {(selectedPoll.taxiVoters || []).length} người đăng ký)</label>
+                                                    <label className="text-xs text-secondary block mb-1 flex items-center gap-1"><Car size={12} /> Tổng tiền Taxi (Sẽ chia đều cho những người có mặt trong {(selectedPoll.taxiVoters || []).length} người đăng ký)</label>
                                                     <div className="flex gap-2">
                                                         <div className="w-1/2">
                                                             <MoneyInput
@@ -549,11 +572,11 @@ const BillSplit: React.FC = () => {
                                                                 placeholder="VD: 150"
                                                             />
                                                         </div>
-                                                        <button 
-                                                            onClick={handleApplyTaxiSplit} 
-                                                            className="flex-1 bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap"
+                                                        <button
+                                                            onClick={handleApplyTaxiSplit}
+                                                            className="flex-1 bg-primary hover:bg-primary-hover text-background px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                                                         >
-                                                            <Calculator size={14}/> Áp dụng
+                                                            <Calculator size={14} /> Áp dụng
                                                         </button>
                                                     </div>
                                                 </div>
@@ -581,7 +604,7 @@ const BillSplit: React.FC = () => {
                                                         </div>
                                                         <button
                                                             onClick={() => { navigator.clipboard.writeText(bankAccount); alert('Copied VIB') }}
-                                                            className="p-2 bg-white/5 hover:bg-white/10 rounded"
+                                                            className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
                                                         >
                                                             <Copy size={16} />
                                                         </button>
@@ -594,7 +617,7 @@ const BillSplit: React.FC = () => {
                                                         </div>
                                                         <button
                                                             onClick={() => { navigator.clipboard.writeText("0798889162"); alert('Copied Momo') }}
-                                                            className="p-2 bg-white/5 hover:bg-white/10 rounded"
+                                                            className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
                                                         >
                                                             <Copy size={16} />
                                                         </button>
@@ -615,12 +638,12 @@ const BillSplit: React.FC = () => {
                     {/* Search Bar */}
                     <div className="relative z-10">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search size={18} className="text-secondary" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={20} />
                         </div>
                         <input
                             type="text"
                             placeholder="Tìm kiếm anh em trong bàn..."
-                            className="block w-full pl-11 pr-4 py-3 bg-surface/50 border border-border rounded-xl text-white placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all backdrop-blur-sm"
+                            className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -635,21 +658,73 @@ const BillSplit: React.FC = () => {
                                     <th className="px-4 py-3 w-16 md:w-24 text-center" title="Tự động cân đối số tiền khi có thay đổi">Auto</th>
                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 1 (đ)</th>
                                     <th className="px-4 py-3 w-32 md:w-48 text-right">Tăng 2 (đ)</th>
-                                    <th className="px-4 py-3 w-32 md:w-40 text-right"><span className="flex items-center justify-end gap-1"><Car size={14}/> Taxi</span></th>
+                                    <th className="px-4 py-3 w-32 md:w-40 text-right"><span className="flex items-center justify-end gap-1"><Car size={14} /> Taxi</span></th>
                                     <th className="px-4 py-3 text-right">Tổng</th>
-                                    <th 
-                                        className="px-4 py-3 text-center cursor-pointer hover:bg-white/5 transition-colors select-none"
-                                        onClick={() => {
-                                            setSortMode(prev => {
-                                                if (prev === 'NONE') return 'UNPAID';
-                                                if (prev === 'UNPAID') return 'PAID';
-                                                return 'NONE';
-                                            });
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-center gap-1">
-                                            Đã đóng?
-                                            <ArrowUpDown size={12} className={sortMode !== 'NONE' ? 'text-primary animate-pulse' : 'text-secondary/50'} />
+                                    <th className="px-4 py-3 text-center select-none">
+                                        <div className="flex flex-col items-center gap-1">
+                                            {isAdmin && (
+                                                <div 
+                                                    className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors mb-1 border-b border-white/10 pb-1"
+                                                    onClick={() => {
+                                                        const visibleItems = (Object.values(userItems) as BillItem[])
+                                                            .filter(item => {
+                                                                const u = getDisplayUser(item.userId);
+                                                                const search = searchTerm.toLowerCase();
+                                                                return u.nickname.toLowerCase().includes(search) ||
+                                                                    (u.name || '').toLowerCase().includes(search) ||
+                                                                    (u.email || '').toLowerCase().includes(search);
+                                                            });
+                                                        const allPaid = visibleItems.length > 0 && visibleItems.every(i => i.isPaid);
+                                                        handleToggleAllPaid(!allPaid);
+                                                    }}
+                                                >
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                                        (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).every(i => i.isPaid) && (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).length > 0
+                                                        ? 'bg-primary border-primary text-black' 
+                                                        : 'bg-transparent border-white/30'
+                                                    }`}>
+                                                        {(Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).every(i => i.isPaid) && (Object.values(userItems) as BillItem[]).filter(item => {
+                                                            const u = getDisplayUser(item.userId);
+                                                            const search = searchTerm.toLowerCase();
+                                                            return u.nickname.toLowerCase().includes(search) ||
+                                                                (u.name || '').toLowerCase().includes(search) ||
+                                                                (u.email || '').toLowerCase().includes(search);
+                                                        }).length > 0 && <Check size={12} strokeWidth={4} />}
+                                                    </div>
+                                                    <span className="text-[10px]">All</span>
+                                                </div>
+                                            )}
+                                            <div 
+                                                className="flex items-center justify-center gap-1 cursor-pointer hover:text-white transition-colors"
+                                                onClick={() => {
+                                                    setSortMode(prev => {
+                                                        if (prev === 'NONE') return 'UNPAID';
+                                                        if (prev === 'UNPAID') return 'PAID';
+                                                        return 'NONE';
+                                                    });
+                                                }}
+                                            >
+                                                Đã đóng?
+                                                <ArrowUpDown size={12} className={sortMode !== 'NONE' ? 'text-primary animate-pulse' : 'text-secondary/50'} />
+                                            </div>
                                         </div>
                                     </th>
                                 </tr>
@@ -659,11 +734,11 @@ const BillSplit: React.FC = () => {
                                     .filter(item => {
                                         const u = getDisplayUser(item.userId);
                                         const search = searchTerm.toLowerCase();
-                                        return u.nickname.toLowerCase().includes(search) || 
-                                               (u.name || '').toLowerCase().includes(search) || 
-                                               (u.email || '').toLowerCase().includes(search);
+                                        return u.nickname.toLowerCase().includes(search) ||
+                                            (u.name || '').toLowerCase().includes(search) ||
+                                            (u.email || '').toLowerCase().includes(search);
                                     })
-                                    .sort((a, b) => {
+                                    .sort((a,b) => {
                                         if (sortMode === 'NONE') return 0;
                                         if (sortMode === 'PAID') {
                                             if (a.isPaid === b.isPaid) return 0;
@@ -676,75 +751,75 @@ const BillSplit: React.FC = () => {
                                         return 0;
                                     })
                                     .map(item => {
-                                    const displayUser = getDisplayUser(item.userId);
-                                    const isGhost = !users[item.userId];
-                                    return (
-                                        <tr key={item.userId} className={item.userId === user?.id ? 'bg-primary/5' : ''}>
-                                            <td className="px-4 py-3 flex items-center gap-3">
-                                                <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
-                                                <div className="flex flex-col">
-                                                    <span className={`font-bold ${item.userId === user?.id ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
-                                                        {displayUser.nickname} {item.userId === user?.id && '(Bạn)'}
-                                                    </span>
-                                                    {selectedPoll?.participants?.[item.userId]?.isNonDrinker && (
-                                                        <span className="text-[10px] text-secondary bg-white/5 border border-white/10 px-1 rounded w-fit">Không uống 🥤</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <button 
-                                                    onClick={() => toggleAutoBalance(item.userId)}
-                                                    className={`p-2 rounded-lg transition-all ${autoBalanceMap[item.userId] ? 'text-primary bg-primary/10' : 'text-secondary bg-white/5'}`}
-                                                    title={autoBalanceMap[item.userId] ? "Đang tự động cân đối" : "Số tiền cố định"}
-                                                >
-                                                    {autoBalanceMap[item.userId] ? <RefreshCw size={18} className="animate-spin-slow" /> : <Lock size={18} />}
-                                                </button>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <MoneyInput
-                                                    value={item.amount}
-                                                    onChange={val => handleItemChange(item.userId, 'amount', val)}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <MoneyInput
-                                                    value={item.round2Amount}
-                                                    onChange={val => handleItemChange(item.userId, 'round2Amount', val)}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <MoneyInput
-                                                    value={item.taxiAmount || 0}
-                                                    onChange={val => handleItemChange(item.userId, 'taxiAmount', val)}
-                                                    disabled={!isAdmin}
-                                                    placeholder={selectedPoll.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-black text-primary text-xl whitespace-nowrap">
-                                                {(item.amount + item.round2Amount + (item.taxiAmount || 0)).toLocaleString()} đ
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <div className="flex justify-center">
-                                                    {!isAdmin ? (
-                                                        <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${item.isPaid ? 'bg-green-500 text-background border-none shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/5 border border-white/10'}`}>
-                                                            {item.isPaid && <Check size={14} className="stroke-[4px]" />}
-                                                        </div>
-                                                    ) : (
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={item.isPaid}
-                                                            disabled={!isAdmin}
-                                                            onChange={e => handleItemChange(item.userId, 'isPaid', e.target.checked)}
-                                                            className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
-                                                        />
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
+                                        const displayUser = getDisplayUser(item.userId);
+                                        const isGhost = !users[item.userId];
+                                        return (
+                                            <tr key={item.userId} className={item.userId === user?.id ? 'bg-primary/5' : ''}>
+                                                <td className="px-4 py-3 flex items-center gap-3">
+                                                    <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
+                                                    <div className="flex flex-col">
+                                                        <span className={`font-bold ${item.userId === user?.id ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
+                                                            {displayUser.nickname} {item.userId === user?.id && '(Bạn)'}
+                                                        </span>
+                                                        {selectedPoll?.participants?.[item.userId]?.isNonDrinker && (
+                                                            <span className="text-[10px] text-secondary bg-white/5 border border-white/10 px-1 rounded w-fit">Không uống 🥤</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        onClick={() => toggleAutoBalance(item.userId)}
+                                                        className={`p-2 rounded-lg transition-all cursor-pointer ${autoBalanceMap[item.userId] ? 'text-primary bg-primary/10' : 'text-secondary bg-white/5'}`}
+                                                        title={autoBalanceMap[item.userId] ? "Đang tự động cân đối" : "Số tiền cố định"}
+                                                    >
+                                                        {autoBalanceMap[item.userId] ? <RefreshCw size={18} className="animate-spin-slow" /> : <Lock size={18} />}
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <MoneyInput
+                                                        value={item.amount}
+                                                        onChange={val => handleItemChange(item.userId,'amount',val)}
+                                                        disabled={!isAdmin}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <MoneyInput
+                                                        value={item.round2Amount}
+                                                        onChange={val => handleItemChange(item.userId,'round2Amount',val)}
+                                                        disabled={!isAdmin}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <MoneyInput
+                                                        value={item.taxiAmount || 0}
+                                                        onChange={val => handleItemChange(item.userId,'taxiAmount',val)}
+                                                        disabled={!isAdmin}
+                                                        placeholder={selectedPoll.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-black text-primary text-xl whitespace-nowrap">
+                                                    {(item.amount + item.round2Amount + (item.taxiAmount || 0)).toLocaleString()} đ
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="flex justify-center">
+                                                        {!isAdmin ? (
+                                                            <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${item.isPaid ? 'bg-green-500 text-background border-none shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/5 border border-white/10'}`}>
+                                                                {item.isPaid && <Check size={14} className="stroke-[4px]" />}
+                                                            </div>
+                                                        ) : (
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={item.isPaid}
+                                                                disabled={!isAdmin}
+                                                                onChange={e => handleItemChange(item.userId,'isPaid',e.target.checked)}
+                                                                className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 <tr className="bg-primary/10">
                                     <td className="px-4 py-4 font-black text-white text-right uppercase tracking-wider" colSpan={5}>TỔNG THIỆT HẠI:</td>
                                     <td className="px-4 py-4 font-black text-primary text-right text-xl whitespace-nowrap">{grandTotal.toLocaleString()} đ</td>
@@ -753,8 +828,8 @@ const BillSplit: React.FC = () => {
                                 {(() => {
                                     const totalCollected = (Object.values(userItems) as BillItem[])
                                         .filter(item => item.isPaid)
-                                        .reduce((sum, item) => sum + (item.amount || 0) + (item.round2Amount || 0) + (item.taxiAmount || 0), 0);
-                                    
+                                        .reduce((sum,item) => sum + (item.amount || 0) + (item.round2Amount || 0) + (item.taxiAmount || 0),0);
+
                                     const remaining = grandTotal - totalCollected;
 
                                     return (
@@ -782,7 +857,7 @@ const BillSplit: React.FC = () => {
                                 onClick={handleSave}
                                 disabled={saving || !isDirty}
                                 className={`font-bold px-8 py-4 rounded-xl shadow-2xl flex items-center gap-2 transform active:scale-95 transition-all
-                                    ${saving || !isDirty ? 'bg-secondary/20 text-secondary cursor-not-allowed opacity-50' : 'bg-primary hover:bg-primary-hover text-background'}
+                                    ${saving || !isDirty ? 'bg-secondary/20 text-secondary cursor-not-allowed opacity-50' : 'bg-primary hover:bg-primary-hover text-background cursor-pointer'}
                                 `}
                             >
                                 <Save size={24} /> {saving ? 'Đang lưu...' : 'Lưu Bill & Cập nhật BXH'}

@@ -103,7 +103,7 @@ const Login: React.FC = () => {
                         <div className="flex flex-col gap-2">
                             <div className="flex justify-between items-center">
                                 <label htmlFor="password-input" className="text-white text-sm font-bold ml-1 cursor-pointer">Mật khẩu</label>
-                                <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline">Quên mật khẩu?</button>
+                                <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline cursor-pointer">Quên mật khẩu?</button>
                             </div>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
@@ -123,7 +123,7 @@ const Login: React.FC = () => {
                                         e.stopPropagation();
                                         setShowPass(!showPass);
                                     }}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors z-10 p-1"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors z-10 p-1 cursor-pointer"
                                 >
                                     {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
@@ -141,7 +141,7 @@ const Login: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                            className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
                         >
                             {loading ? 'Đang vào bàn...' : 'Vào Tiệc Ngay'}
                         </button>
@@ -162,7 +162,7 @@ const Login: React.FC = () => {
                     <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
                         <button
                             onClick={() => setShowForgot(false)}
-                            className="absolute top-4 right-4 text-secondary hover:text-white"
+                            className="absolute top-4 right-4 text-secondary hover:text-white cursor-pointer"
                         >
                             <XCircle size={24} />
                         </button>
@@ -184,7 +184,7 @@ const Login: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={sendingReset}
-                                className="w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all"
+                                className="w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all cursor-pointer"
                             >
                                 {sendingReset ? 'Đang gửi...' : 'Gửi Link Reset'}
                             </button>
