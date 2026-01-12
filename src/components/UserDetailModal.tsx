@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Poll, UserRole } from '@/core/types/types';
-import { X, Calendar, CheckCircle, AlertTriangle, Trophy, UserX } from 'lucide-react';
+import { X, Calendar, CheckCircle, AlertTriangle, Trophy, UserX, Beer, BeerOff } from 'lucide-react';
 
 interface UserDetailModalProps {
     user: User | null;
@@ -9,6 +9,7 @@ interface UserDetailModalProps {
     currentUserRole?: UserRole; // To check permissions
     onToggleAttendance?: (pollId: string, userId: string) => void;
     onToggleFlake?: (pollId: string, userId: string) => void;
+    onToggleNonDrinker?: (pollId: string, userId: string) => void;
 }
 
 export const UserDetailModal: React.FC<UserDetailModalProps> = ({
@@ -17,7 +18,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     allPolls,
     currentUserRole,
     onToggleAttendance,
-    onToggleFlake
+    onToggleFlake,
+    onToggleNonDrinker
 }) => {
     if (!user) return null;
 
@@ -43,6 +45,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             isVotedFull,
             isAttended,
             isFlaked,
+            isNonDrinker: participant?.isNonDrinker || false,
             status: participant?.status || 'N/A'
         };
     }).filter(item => item.isJoined || item.isAttended); // Only show relevant polls
@@ -158,6 +161,21 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                 <td className="px-4 py-3 text-center">
                                                     {currentUserRole === 'ADMIN' && onToggleAttendance && onToggleFlake ? (
                                                         <div className="flex items-center justify-center gap-2">
+                                                            {/* Non-drinker Toggle Button (Yellow/Orange) */}
+                                                            {onToggleNonDrinker && (
+                                                                <button
+                                                                    onClick={() => onToggleNonDrinker(item.poll.id, user.id)}
+                                                                    className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 border ${item.isNonDrinker
+                                                                        ? 'bg-secondary border-secondary text-white'
+                                                                        : 'bg-primary border-primary text-background hover:bg-primary-hover shadow-[0_0_10px_rgba(244,140,37,0.2)]'
+                                                                        }`}
+                                                                    title={item.isNonDrinker ? "Chuyển sang CÓ NHẬU" : "Chuyển sang KHÔNG NHẬU"}
+                                                                >
+                                                                    {item.isNonDrinker ? <BeerOff size={12} /> : <Beer size={12} />}
+                                                                    {item.isNonDrinker ? 'Ko Uống' : 'Có Uống'}
+                                                                </button>
+                                                            )}
+
                                                             {/* Check-in Button (Green) */}
                                                             <button
                                                                 onClick={() => {
@@ -192,7 +210,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                                         <div className="flex justify-center">
                                                             {item.isAttended ? (
                                                                 <span className="text-green-400 font-bold text-xs bg-green-900/20 px-2 py-1 rounded border border-green-900/30 flex items-center gap-1">
-                                                                    <CheckCircle size={12} /> Có mặt
+                                                                    <CheckCircle size={12} /> Có mặt {item.isNonDrinker && '(Ko uống)'}
                                                                 </span>
                                                             ) : (
                                                                 item.isFlaked ? (

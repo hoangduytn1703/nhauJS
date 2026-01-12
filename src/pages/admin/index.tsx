@@ -371,6 +371,20 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handleToggleNonDrinker = async (pollId: string, userId: string) => {
+        if (!isAdmin) return;
+        try {
+            await DataService.toggleNonDrinker(pollId, userId);
+            refreshData();
+            if (selectedUser && selectedUser.id === userId) {
+                const updatedUser = await DataService.getUser(userId);
+                setSelectedUser(updatedUser);
+            }
+        } catch (e) {
+            alert('Lỗi khi cập nhật trạng thái nhậu');
+        }
+    };
+
     const handleFinalizeClick = (poll: Poll) => {
         if (!isAdmin) return;
         if (finalizingPollId === poll.id) {
@@ -459,6 +473,7 @@ const Admin: React.FC = () => {
                 currentUserRole={user?.role}
                 onToggleAttendance={handleToggleAttendance}
                 onToggleFlake={handleToggleFlake}
+                onToggleNonDrinker={handleToggleNonDrinker}
             />
 
             {/* --- VIEW RESULTS MODAL (Reusable) --- */}

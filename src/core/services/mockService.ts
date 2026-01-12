@@ -453,6 +453,32 @@ export const DataService = {
       });
   },
 
+  toggleNonDrinker: async (pollId: string, userId: string): Promise<void> => {
+      const pollRef = doc(db, "polls", pollId);
+      await runTransaction(db, async (transaction) => {
+          const pollDoc = await transaction.get(pollRef);
+          if (!pollDoc.exists()) throw "Poll not found";
+          
+          const pollData = pollDoc.data() as Poll;
+          const participants = pollData.participants || {};
+          if (!participants[userId]) {
+              // If user hasn't joined, we can still set the flag for when they do
+              participants[userId] = {
+                  status: 'JOIN',
+                  timestamp: Date.now(),
+                  isNonDrinker: true
+              };
+          } else {
+              participants[userId] = {
+                  ...participants[userId],
+                  isNonDrinker: !participants[userId].isNonDrinker
+              };
+          }
+          
+          transaction.update(pollRef, { participants });
+      });
+  },
+
   getUsers: async (): Promise<User[]> => {
     const snapshot = await getDocs(collection(db, "users"));
     return snapshot.docs.map(doc => doc.data() as User);

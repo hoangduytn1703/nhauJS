@@ -37,6 +37,7 @@ export interface PollOption {
 export interface ParticipantData {
   status: 'JOIN' | 'DECLINE';
   reason?: string;
+  isNonDrinker?: boolean; // New: For splitting beer/food
   timestamp: number;
 }
 
@@ -52,6 +53,13 @@ export interface BillInfo {
   imageUrl?: string; // Hình ảnh hóa đơn (Base64)
   items: Record<string, BillItem>; // Key là userId
   totalAmount: number;
+  baseAmount?: number;
+  baseAmountBeer?: number;
+  baseAmountFood?: number;
+  round2Amount?: number;
+  round2AmountBeer?: number;
+  round2AmountFood?: number;
+  totalTaxiAmount?: number;
 }
 
 export interface Poll {
