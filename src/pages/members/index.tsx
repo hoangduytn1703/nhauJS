@@ -57,6 +57,16 @@ const Members: React.FC = () => {
         }
     };
 
+    const handleToggleNonDrinker = async (pollId: string, userId: string) => {
+        if (user?.role !== UserRole.ADMIN) return;
+        try {
+            await DataService.toggleNonDrinker(pollId, userId);
+            refreshData();
+        } catch (e) {
+            alert('Lỗi khi cập nhật trạng thái nhậu');
+        }
+    };
+
     // Filter: Search term AND Exclude Admin
     const filteredUsers = users.filter(u =>
         u.role !== 'ADMIN' &&
@@ -81,6 +91,7 @@ const Members: React.FC = () => {
                 currentUserRole={user?.role}
                 onToggleAttendance={handleToggleAttendance}
                 onToggleFlake={handleToggleFlake}
+                onToggleNonDrinker={handleToggleNonDrinker}
             />
 
             <div className="mb-8">

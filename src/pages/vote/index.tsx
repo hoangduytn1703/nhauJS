@@ -189,6 +189,19 @@ const Vote: React.FC = () => {
     }
   };
 
+  const handleNoDrinkVote = async (pollId: string) => {
+    if (!user) return;
+    const poll = polls.find(p => p.id === pollId);
+    if (poll && isPollEnded(poll)) return;
+    
+    try {
+      await DataService.toggleNonDrinker(pollId,user.id);
+      fetchData();
+    } catch (e: any) {
+      alert(e.message || "Lỗi thao tác");
+    }
+  };
+
   const isPollEnded = (poll: Poll) => {
     const deadlinePassed = poll.deadline > 0 && Date.now() > poll.deadline;
     // Kèo coi như kết thúc nếu quá hạn HOẶC đã được admin chốt (có finalizedOptionId)
@@ -787,6 +800,37 @@ const Vote: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* --- NEW PART: DRINKING STATUS --- */}
+                {participationStatus === 'JOIN' && (
+                  <div className="bg-surface/50 border border-border p-6 rounded-2xl animate-in slide-in-from-bottom-4 mt-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div>
+                        <h4 className="text-xl font-bold text-white flex items-center gap-2">
+                          <Beer className={`${participant?.isNonDrinker ? 'text-secondary opacity-50' : 'text-primary'}`} size={24} /> Trạng thái nhậu 🍻
+                        </h4>
+                        <p className="text-sm text-secondary mt-1">
+                          {participant?.isNonDrinker 
+                            ? "Bạn đã chọn KHÔNG UỐNG. Hệ thống sẽ chỉ chia tiền mồi (đồ ăn)." 
+                            : "Uống tới bến! Bạn sẽ cùng chia tiền bia/rượu."}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 bg-background/50 p-2 pr-4 rounded-full border border-border">
+                        <button
+                          onClick={() => handleNoDrinkVote(poll.id)}
+                          disabled={isAdmin || ended}
+                          className={`relative flex items-center w-14 h-8 rounded-full transition-all p-1 ${participant?.isNonDrinker ? 'bg-secondary' : 'bg-primary'}`}
+                        >
+                          <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all ${participant?.isNonDrinker ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </button>
+                        <span className={`font-bold text-sm ${participant?.isNonDrinker ? 'text-secondary' : 'text-primary'}`}>
+                          {participant?.isNonDrinker ? 'KHÔNG UỐNG' : 'CÓ UỐNG'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* --- PART C: TAXI REGISTRATION (NEW) --- */}
                 {poll.enableTaxi && (

@@ -68,6 +68,16 @@ const Leaderboard: React.FC = () => {
         }
     };
 
+    const handleToggleNonDrinker = async (pollId: string, userId: string) => {
+        if (user?.role !== UserRole.ADMIN) return;
+        try {
+            await DataService.toggleNonDrinker(pollId, userId);
+            refreshData();
+        } catch (e) {
+            alert('Lỗi khi cập nhật trạng thái nhậu');
+        }
+    };
+
     // Calculate scores
     const userStats = users
         .filter(u => u.role !== 'ADMIN') // Exclude Admins from Leaderboard
@@ -147,6 +157,7 @@ const Leaderboard: React.FC = () => {
                 currentUserRole={user?.role}
                 onToggleAttendance={handleToggleAttendance}
                 onToggleFlake={handleToggleFlake}
+                onToggleNonDrinker={handleToggleNonDrinker}
             />
 
             <div className="text-center py-8">
@@ -184,7 +195,7 @@ const Leaderboard: React.FC = () => {
                             <div className="mt-auto flex flex-col items-center gap-4 w-full">
                                 <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30 w-full justify-center">
                                     <DollarSign size={20} />
-                                    <span className="font-black text-lg">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
+                                    <span className="font-black text-lg">{Math.round(u.totalMoney).toLocaleString('vi-VN')}đ</span>
                                 </div>
 
                                 {/* Stats Section - Fixed Layout */}
@@ -235,7 +246,7 @@ const Leaderboard: React.FC = () => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                    <span className="font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">{(Math.round(u.totalMoney) * 1000).toLocaleString('vi-VN')}đ</span>
+                                    <span className="font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">{Math.round(u.totalMoney).toLocaleString('vi-VN')}đ</span>
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className="text-secondary flex items-center justify-center gap-1">
