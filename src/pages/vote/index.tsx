@@ -456,13 +456,13 @@ const Vote: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShowDeclineInputFor(null)}
-                        className="flex-1 py-2 rounded-lg font-bold border border-border text-secondary hover:text-white"
+                        className="flex-1 py-2 rounded-lg font-bold border border-border text-secondary hover:text-white cursor-pointer"
                       >
                         Quay lại
                       </button>
                       <button
                         onClick={() => handleParticipation(poll.id,'DECLINE',declineReason)}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold cursor-pointer"
                       >
                         Xác nhận nghỉ
                       </button>
@@ -472,13 +472,13 @@ const Vote: React.FC = () => {
                   <div className="flex gap-4">
                     <button
                       onClick={() => handleParticipation(poll.id,'JOIN')}
-                      className="px-8 py-3 bg-primary text-background font-black rounded-xl hover:bg-primary-hover shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+                      className="px-8 py-3 bg-primary text-background font-black rounded-xl hover:bg-primary-hover shadow-lg hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
                     >
                       <CheckCircle size={20} /> Gét Gô (Tham gia)
                     </button>
                     <button
                       onClick={() => setShowDeclineInputFor(poll.id)}
-                      className="px-8 py-3 bg-surface border border-border text-secondary font-bold rounded-xl hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 transition-all flex items-center gap-2"
+                      className="px-8 py-3 bg-surface border border-border text-secondary font-bold rounded-xl hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 transition-all flex items-center gap-2 cursor-pointer"
                     >
                       <XCircle size={20} /> Bận rồi
                     </button>
@@ -509,7 +509,7 @@ const Vote: React.FC = () => {
                 {!ended && (
                   <button
                     onClick={() => handleParticipation(poll.id,'JOIN')}
-                    className="text-primary text-sm font-bold hover:underline mt-2"
+                    className="text-primary text-sm font-bold hover:underline mt-2 cursor-pointer"
                   >
                     Đổi ý? Tham gia lại
                   </button>
@@ -528,13 +528,13 @@ const Vote: React.FC = () => {
                         <span className="text-xs text-white font-bold">Huỷ kèo và xoá vote?</span>
                         <button
                           onClick={() => handleParticipation(poll.id,'DECLINE')}
-                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-full font-bold transition-all"
+                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-full font-bold transition-all cursor-pointer"
                         >
                           Đúng
                         </button>
                         <button
                           onClick={() => setConfirmDeclineId(null)}
-                          className="text-xs bg-surface border border-border hover:bg-white/10 text-white px-3 py-1 rounded-full font-bold transition-all"
+                          className="text-xs bg-surface border border-border hover:bg-white/10 text-white px-3 py-1 rounded-full font-bold transition-all cursor-pointer"
                         >
                           Không
                         </button>
@@ -542,7 +542,7 @@ const Vote: React.FC = () => {
                     ) : (
                       <button
                         onClick={() => setConfirmDeclineId(poll.id)}
-                        className="text-xs text-secondary hover:text-red-400 flex items-center gap-1 border border-transparent hover:border-red-900/50 px-3 py-1 rounded-full transition-all"
+                        className="text-xs text-secondary hover:text-red-400 flex items-center gap-1 border border-transparent hover:border-red-900/50 px-3 py-1 rounded-full transition-all cursor-pointer"
                       >
                         <RefreshCcw size={12} /> Huỷ kèo / Bận đột xuất
                       </button>
@@ -775,7 +775,7 @@ const Vote: React.FC = () => {
                                 className={`w-full py-3 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${isVoted
                                   ? 'bg-primary text-background hover:bg-primary-hover'
                                   : 'bg-background text-white border border-border hover:border-primary hover:text-primary'
-                                  } ${ended || isAdmin ? 'cursor-not-allowed opacity-50' : ''}`}
+                                  } ${ended || isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                               >
                                 {isAdmin ? 'Admin View' : (isVoted ? <><ThumbsUp size={18} /> Đã chọn</> : (ended ? 'Đã hết giờ' : 'Vote ngay'))}
                               </button>
@@ -820,7 +820,7 @@ const Vote: React.FC = () => {
                         <button
                           onClick={() => handleNoDrinkVote(poll.id)}
                           disabled={isAdmin || ended}
-                          className={`relative flex items-center w-14 h-8 rounded-full transition-all p-1 ${participant?.isNonDrinker ? 'bg-secondary' : 'bg-primary'}`}
+                          className={`relative flex items-center w-14 h-8 rounded-full transition-all p-1 ${participant?.isNonDrinker ? 'bg-secondary' : 'bg-primary'} ${isAdmin || ended ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all ${participant?.isNonDrinker ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </button>
@@ -864,7 +864,7 @@ const Vote: React.FC = () => {
                             (poll.taxiVoters || []).includes(user?.id || '')
                               ? 'bg-primary text-background hover:bg-primary-hover shadow-[0_0_20px_rgba(244,140,37,0.3)]'
                               : 'bg-surface border border-border text-white hover:border-primary hover:text-primary'
-                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           {(poll.taxiVoters || []).includes(user?.id || '') ? (
                             <><CarFront size={20} /> {(ended) ? 'ĐÃ ĐĂNG KÝ TAXI' : 'ĐÃ ĐĂNG KÝ TAXI (Bấm để hủy)'}</>
@@ -926,7 +926,7 @@ const Vote: React.FC = () => {
                       <div className="flex justify-center md:justify-start">
                         <button
                           onClick={() => setViewResultPoll(poll)}
-                          className="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 group"
+                          className="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 group cursor-pointer"
                         >
                           <Users size={18} className="text-secondary group-hover:text-white transition-colors" />
                           Xem chi tiết kết quả (Ai đi / Ai bùng?)
@@ -956,7 +956,7 @@ const Vote: React.FC = () => {
           <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button
               onClick={() => setAddModal({ ...addModal,show: false })}
-              className="absolute top-4 right-4 text-secondary hover:text-white"
+              className="absolute top-4 right-4 text-secondary hover:text-white cursor-pointer"
             >
               <XCircle size={24} />
             </button>
@@ -1027,7 +1027,7 @@ const Vote: React.FC = () => {
               <button
                 onClick={submitNewOption}
                 disabled={adding}
-                className="mt-2 w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all"
+                className="mt-2 w-full bg-primary hover:bg-primary-hover text-background font-bold py-3 rounded-xl transition-all cursor-pointer"
               >
                 {adding ? 'Đang thêm...' : 'Thêm ngay & Tự động Vote'}
               </button>
@@ -1047,7 +1047,7 @@ const Vote: React.FC = () => {
               </div>
               <button
                 onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })}
-                className="text-secondary hover:text-white"
+                className="text-secondary hover:text-white cursor-pointer"
               >
                 <XCircle size={24} />
               </button>
