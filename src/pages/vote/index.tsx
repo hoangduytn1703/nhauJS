@@ -155,7 +155,7 @@ const Vote: React.FC = () => {
     if (!user) return;
     if (isAdmin) return alert("Admin chỉ được xem, không tham gia vote!");
 
-    // Check constraint: Must vote time before location
+    // Check constraint: Must vote time before location (Keep this for logical flow unless asked otherwise)
     const poll = polls.find(p => p.id === pollId);
     if (poll && target === 'options' && poll.timeOptions && poll.timeOptions.length > 0) {
       const hasVotedTime = poll.timeOptions.some(t => t.votes.includes(user.id));
@@ -248,6 +248,24 @@ const Vote: React.FC = () => {
     setViewVotersModal({ show: true,title,voterIds });
   };
 
+  // --- Toggle Check-In Logic (for Admin in Modal) ---
+  const handleToggleCheckIn = async (pollId: string, userId: string) => {
+    if (!isAdmin) return;
+    try {
+      await DataService.toggleAttendance(pollId, userId);
+      await fetchData();
+      // Refresh the modal poll data
+      const updatedPolls = await DataService.getPolls();
+      const updatedPoll = updatedPolls.find(p => p.id === pollId);
+      if (updatedPoll) {
+        setViewResultPoll(updatedPoll);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert('Lỗi khi thay đổi trạng thái check-in: ' + (e.message || ''));
+    }
+  };
+
   // Calculate Time Remaining for the first active poll
   const activePoll = polls.find(p => !isPollEnded(p) && p.status === 'OPEN');
   const deadlineDisplay = activePoll?.deadline
@@ -313,6 +331,8 @@ const Vote: React.FC = () => {
         poll={viewResultPoll}
         users={users}
         onClose={() => setViewResultPoll(null)}
+        isAdmin={isAdmin}
+        onToggleCheckIn={handleToggleCheckIn}
       />
 
       {/* Hero */}
@@ -415,26 +435,32 @@ const Vote: React.FC = () => {
 
         return (
           <section key={poll.id} className="space-y-6 relative">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-2xl font-bold text-white">{poll.title}</h3>
-                  {poll.allowMultipleVotes && (
-                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30 flex items-center gap-1">
-                      <CheckSquare size={10} /> Chọn nhiều
-                    </span>
-                  )}
-                  {ended && (
-                    <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1">
-                      <AlertCircle size={10} /> Đã chốt sổ
-                    </span>
-                  )}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="flex-1 md:pr-40">
+                <div className="flex items-center flex-wrap gap-2 mb-2">
+                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight">{poll.title}</h3>
+                  <div className="flex items-center gap-2">
+                    {poll.allowMultipleVotes && (
+                      <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30 flex items-center gap-1 font-bold whitespace-nowrap">
+                        <CheckSquare size={10} /> CHỌN NHIỀU
+                      </span>
+                    )}
+                    {ended && (
+                      <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1 font-bold whitespace-nowrap">
+                        <AlertCircle size={10} /> ĐÃ CHỐT SỔ
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-secondary">{poll.description}</p>
+                <p className="text-secondary text-sm md:text-base whitespace-pre-wrap leading-relaxed max-w-3xl">
+                  {poll.description}
+                </p>
               </div>
 
               {poll.deadline > 0 && (
-                <CountdownBadge deadline={poll.deadline} ended={ended} />
+                <div className="shrink-0 md:pt-1">
+                  <CountdownBadge deadline={poll.deadline} ended={ended} />
+                </div>
               )}
             </div>
 
@@ -639,7 +665,7 @@ const Vote: React.FC = () => {
                       })}
 
                       {/* --- ADD TIME BUTTON --- */}
-                      {!ended && participationStatus === 'JOIN' && !isAdmin && (
+                      {!ended && participationStatus === 'JOIN' && !isAdmin && (poll.allowMemberAddTimes !== false) && (
                         <button
                           onClick={() => openAddModal(poll.id,'timeOptions')}
                           className="relative overflow-hidden p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer h-full min-h-[160px]"
@@ -786,7 +812,7 @@ const Vote: React.FC = () => {
                     })}
 
                     {/* --- ADD LOCATION BUTTON --- */}
-                    {!ended && participationStatus === 'JOIN' && !isAdmin && (
+                    {!ended && participationStatus === 'JOIN' && !isAdmin && (poll.allowMemberAddPlaces !== false) && (
                       <button
                         onClick={() => openAddModal(poll.id,'options')}
                         className="group relative flex flex-col items-center justify-center bg-surface/30 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all p-8 min-h-[300px]"
@@ -856,7 +882,7 @@ const Vote: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-background/40 p-4 rounded-xl border border-border/50">
-                        <p className="text-xs text-secondary mb-3">Điều kiện: Phải hoàn thành bình chọn Địa điểm và Thời gian.</p>
+                        <p className="text-xs text-secondary mb-3">Điều kiện: Phải hoàn thành bình chọn Thời gian (nếu có).</p>
                         <button
                           onClick={() => handleTaxiVote(poll.id)}
                           disabled={isAdmin || ended}

@@ -6,7 +6,8 @@ import {
   signOut,
   updateProfile as updateAuthProfile,
   sendPasswordResetEmail,
-  updatePassword
+  updatePassword,
+  sendEmailVerification
 } from 'firebase/auth';
 import { 
   collection, 
@@ -25,43 +26,65 @@ import {
   increment
 } from 'firebase/firestore';
 
+// Platform detection
+const isDU2 = () => window.location.pathname.startsWith('/du2');
+const getColl = (name: string) => isDU2() ? `du2_${name}` : name;
+
 export const AuthService = {
   login: async (email: string, password: string): Promise<User> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-      
-      // Fetch user data from Firestore
-      const userDoc = await getDoc(doc(db, "users", uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-        if (userData.isBanned) {
+      const auUser = userCredential.user;
+      const uid = auUser.uid;
+
+      // Fetch user data from Firestore first to check for legacy verification
+      const userDoc = await getDoc(doc(db, getColl("users"), uid));
+      const userDataFromDb = userDoc.exists() ? userDoc.data() as User : null;
+
+      // Logic: Allow login if verified in Auth OR verified in Firestore OR it's the special DU2 Admin
+      const isDU2Admin = email === 'admin@admin.com';
+      const isVerified = auUser.emailVerified || userDataFromDb?.isEmailVerified === true || isDU2Admin;
+
+      if (!isVerified) {
+        await signOut(auth);
+        throw new Error("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư đến!");
+      }
+
+      if (userDataFromDb) {
+        if (userDataFromDb.isBanned) {
             await signOut(auth);
             throw new Error("Tài khoản của bạn đã bị khóa vĩnh viễn do vi phạm quy chế 'Nhậu nhẹt'. Liên hệ Admin.");
         }
-        return userData;
+        // Sync verification status to Firestore if Auth is verified but Firestore isn't
+        if (auUser.emailVerified && !userDataFromDb.isEmailVerified) {
+            await updateDoc(doc(db, "users", uid), { isEmailVerified: true });
+            userDataFromDb.isEmailVerified = true;
+        }
+        return userDataFromDb;
       } else {
         // Fallback: Nếu login được auth nhưng chưa có trong firestore
         const newUser: User = {
             id: uid,
-            email: userCredential.user.email || "",
-            name: userCredential.user.displayName || "User",
-            nickname: userCredential.user.displayName || "User",
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
-            role: UserRole.MEMBER,
-            quote: 'Chưa say chưa về',
+            email: auUser.email || "",
+            name: auUser.displayName || (isDU2Admin ? "Sếp Tổng DU2" : "User"),
+            nickname: auUser.displayName || (isDU2Admin ? "Admin DU2" : "User"),
+            avatar: isDU2Admin ? "https://api.dicebear.com/7.x/bottts/svg?seed=admin" : `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+            role: isDU2Admin ? UserRole.ADMIN : UserRole.MEMBER,
+            quote: isDU2Admin ? "We Are One - No One Left Behind" : 'Chưa say chưa về',
             favoriteDrinks: [],
             isBanned: false,
+            isEmailVerified: true,
             flakeCount: 0,
             flakedPolls: [],
             attendanceOffset: 0,
             voteOffset: 0
         };
-        await setDoc(doc(db, "users", uid), newUser);
+        await setDoc(doc(db, getColl("users"), uid), newUser);
         return newUser;
       }
     } catch (error: any) {
       console.error("Login Error", error);
+      if (error.message.includes("chưa được xác minh")) throw error;
       if (error.message.includes("bị khóa")) throw error;
       throw new Error("Email hoặc mật khẩu không đúng!");
     }
@@ -71,6 +94,9 @@ export const AuthService = {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
+
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
 
       const newUser: User = {
         id: uid,
@@ -82,13 +108,19 @@ export const AuthService = {
         quote: 'Chưa say chưa về',
         favoriteDrinks: [],
         isBanned: false,
+        isEmailVerified: false,
         flakeCount: 0,
         flakedPolls: [],
         attendanceOffset: 0,
         voteOffset: 0
       };
 
-      await setDoc(doc(db, "users", uid), newUser);
+      await setDoc(doc(db, getColl("users"), uid), newUser);
+      
+      // Since registration automatically logs in in Firebase, we should sign out
+      // so they have to verify and log in again.
+      await signOut(auth);
+
       return newUser;
     } catch (error: any) {
       console.error("Register Error", error);
@@ -122,12 +154,12 @@ export const AuthService = {
 
 export const DataService = {
   getUser: async (userId: string): Promise<User | null> => {
-    const snap = await getDoc(doc(db, "users", userId));
+    const snap = await getDoc(doc(db, getColl("users"), userId));
     return snap.exists() ? snap.data() as User : null;
   },
 
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {
-    const userRef = doc(db, "users", userId);
+    const userRef = doc(db, getColl("users"), userId);
     await updateDoc(userRef, data);
     const snapshot = await getDoc(userRef);
     return snapshot.data() as User;
@@ -135,17 +167,17 @@ export const DataService = {
 
   // Admin: Ban/Unban User
   toggleBanUser: async (userId: string, isBanned: boolean): Promise<void> => {
-      const userRef = doc(db, "users", userId);
+      const userRef = doc(db, getColl("users"), userId);
       await updateDoc(userRef, { isBanned });
   },
 
   // Admin: Permanently Delete User
   deleteUser: async (userId: string): Promise<void> => {
-      await deleteDoc(doc(db, "users", userId));
+      await deleteDoc(doc(db, getColl("users"), userId));
   },
 
   getPolls: async (): Promise<Poll[]> => {
-    const pollsRef = collection(db, "polls");
+    const pollsRef = collection(db, getColl("polls"));
     const q = query(pollsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     
@@ -163,6 +195,8 @@ export const DataService = {
        confirmedAttendances: [],
        finalizedOptionId: null,
        finalizedTimeId: null,
+       allowMemberAddPlaces: pollData.allowMemberAddPlaces ?? true,
+       allowMemberAddTimes: pollData.allowMemberAddTimes ?? true,
        options: options.map((opt, index) => ({
          id: `opt_loc_${Date.now()}_${index}`,
          text: opt.text,
@@ -181,7 +215,7 @@ export const DataService = {
        }))
      };
 
-     const docRef = await addDoc(collection(db, "polls"), newPollData);
+     const docRef = await addDoc(collection(db, getColl("polls")), newPollData);
      
      return {
        id: docRef.id,
@@ -190,16 +224,16 @@ export const DataService = {
   },
 
   updatePoll: async (pollId: string, pollData: Partial<Poll>): Promise<void> => {
-    const pollRef = doc(db, "polls", pollId);
+    const pollRef = doc(db, getColl("polls"), pollId);
     await updateDoc(pollRef, pollData);
   },
 
   deletePoll: async (pollId: string): Promise<void> => {
-    await deleteDoc(doc(db, "polls", pollId));
+    await deleteDoc(doc(db, getColl("polls"), pollId));
   },
 
   finalizePoll: async (pollId: string, timeId: string | null, optionId: string | null): Promise<void> => {
-      const pollRef = doc(db, "polls", pollId);
+      const pollRef = doc(db, getColl("polls"), pollId);
       await updateDoc(pollRef, {
           finalizedTimeId: timeId,
           finalizedOptionId: optionId
@@ -207,7 +241,7 @@ export const DataService = {
   },
   
   addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string, notes?: string, image?: string }, userId: string): Promise<void> => {
-      const pollRef = doc(db, "polls", pollId);
+      const pollRef = doc(db, getColl("polls"), pollId);
       
        const newOption: PollOption = {
            id: `opt_${type === 'options' ? 'loc' : 'time'}_${Date.now()}_user`,
@@ -228,14 +262,14 @@ export const DataService = {
   },
 
   updateBill: async (pollId: string, bill: BillInfo): Promise<void> => {
-      const pollRef = doc(db, "polls", pollId);
+      const pollRef = doc(db, getColl("polls"), pollId);
       await updateDoc(pollRef, { bill });
   },
 
   // --- LOGIC BÙNG KÈO & REDEMPTION (Participation) ---
   submitParticipation: async (pollId: string, userId: string, status: 'JOIN' | 'DECLINE', reason?: string): Promise<void> => {
-    const pollRef = doc(db, "polls", pollId);
-    const userRef = doc(db, "users", userId);
+    const pollRef = doc(db, getColl("polls"), pollId);
+    const userRef = doc(db, getColl("users"), userId);
     
     await runTransaction(db, async (transaction) => {
         const pollDoc = await transaction.get(pollRef);
@@ -295,8 +329,8 @@ export const DataService = {
 
   // --- LOGIC VOTE & REDEMPTION (Xóa Bùng kèo) ---
   vote: async (pollId: string, optionId: string, userId: string, target: 'options' | 'timeOptions'): Promise<void> => {
-    const pollRef = doc(db, "polls", pollId);
-    const userRef = doc(db, "users", userId);
+    const pollRef = doc(db, getColl("polls"), pollId);
+    const userRef = doc(db, getColl("users"), userId);
 
     await runTransaction(db, async (transaction) => {
       const pollDoc = await transaction.get(pollRef);
@@ -377,8 +411,8 @@ export const DataService = {
 
   // Toggle Check-in: If checking in, also remove "Flake" penalty if exists
   toggleAttendance: async (pollId: string, userId: string): Promise<void> => {
-      const pollRef = doc(db, "polls", pollId);
-      const userRef = doc(db, "users", userId);
+      const pollRef = doc(db, getColl("polls"), pollId);
+      const userRef = doc(db, getColl("users"), userId);
 
       await runTransaction(db, async (transaction) => {
           const pollDoc = await transaction.get(pollRef);
@@ -414,8 +448,8 @@ export const DataService = {
 
   // NEW: Explicitly toggle Flake Penalty
   toggleFlake: async (pollId: string, userId: string): Promise<void> => {
-      const userRef = doc(db, "users", userId);
-      const pollRef = doc(db, "polls", pollId);
+      const userRef = doc(db, getColl("users"), userId);
+      const pollRef = doc(db, getColl("polls"), pollId);
 
       await runTransaction(db, async (transaction) => {
           const userDoc = await transaction.get(userRef);
@@ -454,7 +488,7 @@ export const DataService = {
   },
 
   toggleNonDrinker: async (pollId: string, userId: string): Promise<void> => {
-      const pollRef = doc(db, "polls", pollId);
+      const pollRef = doc(db, getColl("polls"), pollId);
       await runTransaction(db, async (transaction) => {
           const pollDoc = await transaction.get(pollRef);
           if (!pollDoc.exists()) throw "Poll not found";
@@ -480,12 +514,12 @@ export const DataService = {
   },
 
   getUsers: async (): Promise<User[]> => {
-    const snapshot = await getDocs(collection(db, "users"));
+    const snapshot = await getDocs(collection(db, getColl("users")));
     return snapshot.docs.map(doc => doc.data() as User);
   },
 
   toggleTaxiVote: async (pollId: string, userId: string): Promise<void> => {
-    const pollRef = doc(db, "polls", pollId);
+    const pollRef = doc(db, getColl("polls"), pollId);
     
     await runTransaction(db, async (transaction) => {
         const pollDoc = await transaction.get(pollRef);
@@ -495,11 +529,13 @@ export const DataService = {
         if (!pollData.enableTaxi) throw "Tính năng taxi không bật";
 
         // Logic check: Phải vote đủ giờ và quán mới được vote taxi
-        const votedLoc = pollData.options.some(o => o.votes.includes(userId));
-        const votedTime = (pollData.timeOptions || []).some(t => t.votes.includes(userId));
+        // Update: Bỏ require vote quán - chỉ yêu cầu vote thời gian nếu có
+        const votedTime = (pollData.timeOptions || []).length > 0 
+            ? (pollData.timeOptions || []).some(t => t.votes.includes(userId))
+            : true;
 
-        if (!votedLoc || !votedTime) {
-            throw new Error("Bạn phải bình chọn Địa điểm và Thời gian trước khi đăng ký Taxi!");
+        if (!votedTime) {
+            throw new Error("Bạn phải bình chọn Thời gian trước khi đăng ký Taxi!");
         }
 
         const taxiVoters = pollData.taxiVoters || [];
@@ -509,5 +545,90 @@ export const DataService = {
             transaction.update(pollRef, { taxiVoters: arrayUnion(userId) });
         }
     });
+  },
+
+  // Migration Utility: One-time run to set isEmailVerified for old users
+  migrateEmailVerification: async (): Promise<{ updated: number }> => {
+    const snapshot = await getDocs(collection(db, getColl("users")));
+    let count = 0;
+    
+    // Using simple loop as Firestore doesn't support bulk update without Admin SDK
+    for (const d of snapshot.docs) {
+      const data = d.data() as User;
+      if (data.isEmailVerified === undefined) {
+        await updateDoc(doc(db, getColl("users"), d.id), { isEmailVerified: true });
+        count++;
+      }
+    }
+    return { updated: count };
+  },
+
+  // Seed DU2 Users
+  seedDU2Users: async (): Promise<void> => {
+    const rawUsers = [
+      { id: "qtui83ofmt8f5qr3simcc9jq7h", email: "anhndb@runsystem.net", nickname: "Nguyen Do Bao Anh", first_name: "Nguyễn", last_name: "Đỗ Bảo Anh" },
+      { id: "5t7ic848z7gbznuqajfd5e3ezw", email: "duynh@runsystem.net", nickname: "Nguyen Hoang Duy", first_name: "Nguyễn", last_name: "Hoàng Duy" },
+      { id: "w6xek611t3nxxggyphjbuzgdsc", email: "kienht@runsystem.net", nickname: "Huynh Trong Kien", first_name: "Huỳnh", last_name: "Trọng Kiên" },
+      { id: "66ouytt34pngxrnkn3ep3sir9o", email: "namnv@runsystem.net", nickname: "Nguyen Van Nam", first_name: "Nguyễn", last_name: "Văn Nam" },
+      { id: "s9giuwjd7pyt7bfpt9eynup4my", email: "thanhlc@runsystem.net", nickname: "Le Cong Thanh", first_name: "Lê", last_name: "Công Thành" },
+      { id: "nxwbifke77refcopjuy7weimje", email: "tienntm@runsystem.net", nickname: "Nguyen Thi My Tien", first_name: "Nguyễn", last_name: "Thị Mỹ Tiên" },
+      { id: "quk6kmhckjdopxbapns9nsh8jc", email: "tinnt1@runsystem.net", nickname: "Nguyễn Trọng Tín", first_name: "Nguyễn", last_name: "Trọng Tín" },
+      { id: "psq4f84sktnt5yptw193a56rro", email: "tramvtn@runsystem.net", nickname: "Vu Thi Ngoc Tram", first_name: "Vũ", last_name: "Thị Ngọc Trâm" },
+      { id: "gswnbpgb8fdxzj93oo1cxgwuww", email: "chungvh@runsystem.net", nickname: "Vu Huy Chung", first_name: "Vũ", last_name: "Huy Chung" },
+      { id: "j1cdx6a8tfnhzq8cofnz915uxh", email: "datntq@runsystem.net", nickname: "Nguyen Tran Quoc Dat", first_name: "Nguyễn", last_name: "Trần Quốc Đạt" },
+      { id: "fgw4n98if3frddxmncddfxat5y", email: "duyn@runsystem.net", nickname: "Nguyen Duy", first_name: "Nguyễn", last_name: "Duy" },
+      { id: "tkxkt9jey3f1fyxgib7f736igw", email: "duypt@runsystem.net", nickname: "Phan Tuong Duy", first_name: "Phan", last_name: "Tường Duy" },
+      { id: "zc1fsoknttbqdy67w86whuurdw", email: "hieulq1@runsystem.net", nickname: "Lê Quang Hiếu", first_name: "Lê", last_name: "Quang Hiếu" },
+      { id: "b8q7gkzjxfnb3ek9m6bubaq4zr", email: "hoahk@runsystem.net", nickname: "Huynh Khanh Hoa", first_name: "Huỳnh", last_name: "Khánh Hòa" },
+      { id: "p3m4dgyto7yz58a3ryzpgq6k8a", email: "hoanghm@runsystem.net", nickname: "Huynh Minh Hoang", first_name: "Huỳnh", last_name: "Minh Hoàng" },
+      { id: "yogjqi85b3ryxkaaizfbdrdqpa", email: "hungdn@runsystem.net", nickname: "Dang Ngoc Hung", first_name: "Đặng", last_name: "Ngọc Hùng" },
+      { id: "ii34j91sn381ictns584i5k5we", email: "huynhvt@runsystem.net", nickname: "Vuong Thai Huynh", first_name: "Vương", last_name: "Thái Huỳnh" },
+      { id: "yyodifcra3fnpp98nhu1pmstbw", email: "huyph@runsystem.net", nickname: "Pham Hoang Huy", first_name: "Phạm", last_name: "Hoàng Huy" },
+      { id: "tib6dmroij84mes6o7kes9nmew", email: "locbm@runsystem.net", nickname: "Bui Minh Loc", first_name: "Bùi", last_name: "Minh Lộc" },
+      { id: "aptun7mx3f8t3m3rieikpwspmy", email: "minhnv@runsystem.net", nickname: "Nguyen Van Minh", first_name: "Nguyễn", last_name: "Văn Minh" },
+      { id: "xne3umyjk3ge5c1ptpgoz5696r", email: "namvt@runsystem.net", nickname: "Võ Trung Nam", first_name: "Võ", last_name: "Trung Nam" },
+      { id: "beb3ca8997y8zr1japy98muu6e", email: "tanlv1@runsystem.net", nickname: "Lê Viết Tân", first_name: "Lê", last_name: "Viết Tân" },
+      { id: "9k6u1aowtin4fd5iqorxrnfjiy", email: "tanpt@runsystem.net", nickname: "Pham Thanh Tan", first_name: "Phạm", last_name: "Thanh Tân" },
+      { id: "zcpbfr31fpdbigmdwy3my533ue", email: "thaontp@runsystem.net", nickname: "Ngo Thi Phuong Thao", first_name: "Ngô", last_name: "Thị Phương Thảo" },
+      { id: "eompefin8pfbmb9gcn4xdahc6h", email: "thaontt@runsystem.net", nickname: "Nguyen Thi Thanh Thao", first_name: "Nguyễn", last_name: "Thị Thanh Thảo" },
+      { id: "y7atee4ssfrhfr8qacuots56uh", email: "thucpt@runsystem.net", nickname: "Phạm Tri Thức", first_name: "Phạm", last_name: "Tri Thức" },
+      { id: "7e4yowc8aibhbj4b3uc8o6c8ue", email: "tienln@runsystem.net", nickname: "Lâm Ngọc Tiền", first_name: "Lâm", last_name: "Ngọc Tiền" },
+      { id: "mr9e441ms3gi9jsi7qib83nxfo", email: "tinnm@runsystem.net", nickname: "Nguyen Minh Tin", first_name: "Nguyễn", last_name: "Minh Tín" },
+      { id: "1sm1keom9jrqzqki4wmt6kq8xr", email: "anhvnl@runsystem.net", nickname: "Vo Nguyen Loan Anh", first_name: "Võ", last_name: "Nguyễn Loan Anh" },
+      { id: "udr64m3t1brnjb15sxjypnx6qo", email: "annv@runsystem.net", nickname: "Nguyen Van An", first_name: "Nguyễn", last_name: "Văn An" },
+      { id: "7imqmtgj5tnxtd5fxywfp4n9xe", email: "gianghvt@runsystem.net", nickname: "Hoang Vu Truong Giang", first_name: "Hoàng", last_name: "Vũ Trường Giang" },
+      { id: "933sg8unyjgdmmtogqc4cs8ifo", email: "hiennt1@runsystem.net", nickname: "_Ngo The Hien", first_name: "Ngô", last_name: "Thế Hiển" },
+      { id: "rrzm3hy74pdz9xhpap8xrmu6ao", email: "huytq@runsystem.net", nickname: "Trương Quốc Huy", first_name: "Trương", last_name: "Quốc Huy" },
+      { id: "h7ftn7bt6prs9c3x1bu37ytyre", email: "lieuht@runsystem.net", nickname: "Hoang Thi Lieu", first_name: "Hoàng", last_name: "Thị Liễu" },
+      { id: "cgzwizp4ffbdmkrb534m94y1wc", email: "linhnty@runsystem.net", nickname: "Nguyen Thi Yen Linh", first_name: "Nguyễn", last_name: "Thị Yến Linh" },
+      { id: "zotaff9robn6bfmkko7qrf4d1w", email: "locht1@runsystem.net", nickname: "Huynh Tan Loc", first_name: "Huỳnh", last_name: "Tấn Lộc" },
+      { id: "xrbjbz96qpfy5p3y16cpmrac7w", email: "minhnc@runsystem.net", nickname: "Nguyen Cao Minh", first_name: "Nguyễn", last_name: "Cao Minh" },
+      { id: "7otuhhkukjdy5yik5bz5ikfata", email: "myht@runsystem.net", nickname: "Hoang Thao My", first_name: "Hoàng", last_name: "Thảo My" },
+      { id: "kiuft18hgiggid4upyfa1hpchy", email: "mynl@runsystem.net", nickname: "Nguyễn Lệ Mỹ", first_name: "Nguyễn", last_name: "Lệ Mỹ" },
+      { id: "hnnne1yt6by9pgn67nf3twen5y", email: "nampvd@runsystem.net", nickname: "Pham Vu Duy Nam", first_name: "Phạm", last_name: "Vũ Duy Nam" },
+      { id: "gfoff9qjcigu58ytnsmhbrgdke", email: "nganttt@runsystem.net", nickname: "Tran Thi Thuy Ngan", first_name: "Trần", last_name: "Thị Thùy Ngân" },
+      { id: "9gshittbnbymdmb7nmny1ys6ja", email: "sangnt@runsystem.net", nickname: "Nguyen Thai Sang", first_name: "Nguyễn", last_name: "Thái Sang" },
+      { id: "rsrogikk5fyy5yw5znix78nhya", email: "tuanpha@runsystem.net", nickname: "🅿. Hà Anh Tuấn", first_name: "Phạm", last_name: "Hà Anh Tuấn" }
+    ];
+
+    for (const raw of rawUsers) {
+      const u: User = {
+        id: raw.id,
+        email: raw.email,
+        name: `${raw.first_name} ${raw.last_name}`.trim(),
+        nickname: raw.nickname,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${raw.id}`,
+        role: UserRole.MEMBER,
+        quote: 'We Are One',
+        favoriteDrinks: [],
+        isBanned: false,
+        isEmailVerified: true,
+        flakeCount: 0,
+        flakedPolls: [],
+        attendanceOffset: 0,
+        voteOffset: 0
+      };
+      await setDoc(doc(db, "du2_users", u.id), u);
+    }
   }
 };

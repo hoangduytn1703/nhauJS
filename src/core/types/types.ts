@@ -14,6 +14,7 @@ export interface User {
   quote: string;
   favoriteDrinks: string[];
   isBanned?: boolean; 
+  isEmailVerified?: boolean; // New: Email verification status
   
   // Stats & Logic
   flakeCount?: number; // Tổng số vết nhơ (Display)
@@ -94,6 +95,10 @@ export interface Poll {
   // Taxi Feature
   enableTaxi?: boolean;
   taxiVoters?: string[];
+
+  // Addition Permission (New)
+  allowMemberAddPlaces?: boolean;
+  allowMemberAddTimes?: boolean;
 }
 
 export interface DrinkStats {

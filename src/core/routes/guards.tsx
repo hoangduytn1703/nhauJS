@@ -4,6 +4,7 @@ import { useAuth } from '@/core/hooks';
 
 export const ProtectedRoute: React.FC = () => {
   const { user, loading } = useAuth();
+  const isDU2 = window.location.pathname.startsWith('/du2');
 
   if (loading) {
     return (
@@ -13,15 +14,20 @@ export const ProtectedRoute: React.FC = () => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to={isDU2 ? "/du2/login" : "/login"} replace />;
+  }
   return <Outlet />;
 };
 
 export const PublicRoute: React.FC = () => {
   const { user, loading } = useAuth();
+  const isDU2 = window.location.pathname.startsWith('/du2');
 
   if (loading) return null;
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    return <Navigate to={isDU2 ? "/du2" : "/"} replace />;
+  }
   return <Outlet />;
 };
