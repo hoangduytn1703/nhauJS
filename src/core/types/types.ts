@@ -14,6 +14,7 @@ export interface User {
   quote: string;
   favoriteDrinks: string[];
   isBanned?: boolean; 
+  isEmailVerified?: boolean; // New: Email verification status
   
   // Stats & Logic
   flakeCount?: number; // Tổng số vết nhơ (Display)

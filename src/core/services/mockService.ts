@@ -6,7 +6,8 @@ import {
   signOut,
   updateProfile as updateAuthProfile,
   sendPasswordResetEmail,
-  updatePassword
+  updatePassword,
+  sendEmailVerification
 } from 'firebase/auth';
 import { 
   collection, 
@@ -29,7 +30,14 @@ export const AuthService = {
   login: async (email: string, password: string): Promise<User> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
+      const auUser = userCredential.user;
+
+      if (!auUser.emailVerified) {
+        await signOut(auth);
+        throw new Error("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư đến!");
+      }
+
+      const uid = auUser.uid;
       
       // Fetch user data from Firestore
       const userDoc = await getDoc(doc(db, "users", uid));
@@ -39,19 +47,25 @@ export const AuthService = {
             await signOut(auth);
             throw new Error("Tài khoản của bạn đã bị khóa vĩnh viễn do vi phạm quy chế 'Nhậu nhẹt'. Liên hệ Admin.");
         }
+        // Update verification status in firestore if it was false
+        if (!userData.isEmailVerified) {
+            await updateDoc(doc(db, "users", uid), { isEmailVerified: true });
+            userData.isEmailVerified = true;
+        }
         return userData;
       } else {
         // Fallback: Nếu login được auth nhưng chưa có trong firestore
         const newUser: User = {
             id: uid,
-            email: userCredential.user.email || "",
-            name: userCredential.user.displayName || "User",
-            nickname: userCredential.user.displayName || "User",
+            email: auUser.email || "",
+            name: auUser.displayName || "User",
+            nickname: auUser.displayName || "User",
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
             role: UserRole.MEMBER,
             quote: 'Chưa say chưa về',
             favoriteDrinks: [],
             isBanned: false,
+            isEmailVerified: true,
             flakeCount: 0,
             flakedPolls: [],
             attendanceOffset: 0,
@@ -62,6 +76,7 @@ export const AuthService = {
       }
     } catch (error: any) {
       console.error("Login Error", error);
+      if (error.message.includes("chưa được xác minh")) throw error;
       if (error.message.includes("bị khóa")) throw error;
       throw new Error("Email hoặc mật khẩu không đúng!");
     }
@@ -71,6 +86,9 @@ export const AuthService = {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
+
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
 
       const newUser: User = {
         id: uid,
@@ -82,6 +100,7 @@ export const AuthService = {
         quote: 'Chưa say chưa về',
         favoriteDrinks: [],
         isBanned: false,
+        isEmailVerified: false,
         flakeCount: 0,
         flakedPolls: [],
         attendanceOffset: 0,
@@ -89,6 +108,11 @@ export const AuthService = {
       };
 
       await setDoc(doc(db, "users", uid), newUser);
+      
+      // Since registration automatically logs in in Firebase, we should sign out
+      // so they have to verify and log in again.
+      await signOut(auth);
+
       return newUser;
     } catch (error: any) {
       console.error("Register Error", error);

@@ -10,6 +10,7 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -33,9 +34,8 @@ const Register: React.FC = () => {
     }
 
     try {
-      const user = await AuthService.register(email, name, password);
-      login(user, true);
-      navigate('/profile'); // Send to profile to complete setup
+      await AuthService.register(email, name, password);
+      setRegisteredSuccess(true);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Đăng ký thất bại");
@@ -54,60 +54,79 @@ const Register: React.FC = () => {
 
         {error && <div className="p-3 bg-red-900/30 border border-red-800 text-red-200 rounded-lg text-sm text-center">{error}</div>}
 
-        <form onSubmit={handleRegister} className="flex flex-col gap-5 bg-surface/50 p-8 rounded-3xl border border-border shadow-xl backdrop-blur-sm">
-          <label className="flex flex-col gap-2">
-            <span className="text-white text-sm font-medium">Tên hiển thị</span>
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                placeholder="VD: Tuấn Cồn"
-              />
+        {registeredSuccess ? (
+          <div className="bg-surface/50 p-8 rounded-3xl border border-primary shadow-xl backdrop-blur-sm text-center flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+              <Mail className="text-primary" size={40} />
             </div>
-          </label>
+            <h3 className="text-2xl font-bold text-white">Kiểm tra Hòm thư! 💌</h3>
+            <p className="text-secondary">
+              Một mã xác nhận VIP đã được gửi tới <span className="text-white font-bold">{email}</span>. 
+              Vui lòng xác thực email để hoàn tất việc đăng ký tham gia hội nhậu.
+            </p>
+            <Link 
+              to="/login" 
+              className="mt-4 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full flex items-center justify-center transition-all"
+            >
+              Quay lại Đăng nhập
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleRegister} className="flex flex-col gap-5 bg-surface/50 p-8 rounded-3xl border border-border shadow-xl backdrop-blur-sm">
+            <label className="flex flex-col gap-2">
+              <span className="text-white text-sm font-medium">Tên hiển thị</span>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  placeholder="VD: Tuấn Cồn"
+                />
+              </div>
+            </label>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-white text-sm font-medium">Email</span>
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                placeholder="email@example.com"
-              />
-            </div>
-          </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-white text-sm font-medium">Email</span>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  placeholder="email@example.com"
+                />
+              </div>
+            </label>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-white text-sm font-medium">Mật khẩu</span>
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                placeholder="******"
-              />
-            </div>
-          </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-white text-sm font-medium">Mật khẩu</span>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary" size={20} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-surface text-white border border-border rounded-xl h-12 pl-12 pr-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  placeholder="******"
+                />
+              </div>
+            </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            {loading ? 'Đang đăng ký...' : 'Lên Bia! 🍺'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 w-full h-12 bg-primary hover:bg-primary-hover text-background font-bold text-lg rounded-full shadow-[0_0_20px_rgba(244,140,37,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {loading ? 'Đang đăng ký...' : 'Lên Bia! 🍺'}
+            </button>
+          </form>
+        )}
 
         <div className="text-center mt-2">
           <p className="text-sm text-secondary">
