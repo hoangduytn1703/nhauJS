@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { AuthService, DataService } from '@/core/services/mockService';
 import { useAuth } from '@/core/hooks';
 import { User, UserRole } from '@/core/types/types';
-import { Users, Lock, ChevronRight, ShieldCheck, Mail } from 'lucide-react';
+import { Users, Lock, ChevronRight, ShieldCheck, Mail, XCircle } from 'lucide-react';
 
 const DU2Login: React.FC = () => {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -129,7 +129,7 @@ const DU2Login: React.FC = () => {
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 className="w-full h-12 bg-background border border-border rounded-xl pl-12 pr-4 text-white focus:border-primary outline-none transition-all"
-                                placeholder="admin@admin.com"
+                                placeholder="Nhập email admin"
                                 required
                             />
                         </div>
@@ -186,6 +186,12 @@ const DU2Login: React.FC = () => {
                         placeholder="Nhập tên để tìm kiếm..."
                         value={isDropdownOpen ? searchTerm : (availableUsers.find(u => u.id === selectedUserId)?.nickname || '')}
                         onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                        onClick={() => {
+                          setIsDropdownOpen(true);
+                          if (selectedUserId) {
+                            setSearchTerm('');
+                          }
+                        }}
                         onFocus={() => {
                           setIsDropdownOpen(true);
                           if (!selectedUserId) setSearchTerm('');
@@ -194,8 +200,22 @@ const DU2Login: React.FC = () => {
                           setSearchTerm(e.target.value);
                           setIsDropdownOpen(true);
                         }}
-                        className="w-full h-11 bg-background border border-border rounded-xl px-4 text-white font-bold focus:border-primary outline-none transition-all text-sm"
+                        className="w-full h-11 bg-background border border-border rounded-xl px-4 pr-20 text-white font-bold focus:border-primary outline-none transition-all text-sm"
                       />
+                      {selectedUserId && !isDropdownOpen && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUserId('');
+                            setSearchTerm('');
+                            setIsDropdownOpen(true);
+                          }}
+                          className="absolute right-10 top-1/2 -translate-y-1/2 text-secondary hover:text-red-400 transition-colors p-1"
+                          type="button"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      )}
                       <ChevronRight className={`absolute right-4 top-1/2 -translate-y-1/2 text-secondary transition-transform ${isDropdownOpen ? 'rotate-90' : ''}`} size={16} />
                       
                       {isDropdownOpen && (
@@ -236,11 +256,6 @@ const DU2Login: React.FC = () => {
           )}
         </div>
 
-        <div className="text-center opacity-0 hover:opacity-10 transition-opacity">
-            <button onClick={() => setAdminMode(true)} className="text-[10px] text-secondary uppercase tracking-[0.3em] cursor-default">
-                Admin Portal
-            </button>
-        </div>
         <div className="text-center">
             <p className="text-xs text-secondary opacity-40 uppercase tracking-[0.3em]">Authorized Members Only</p>
         </div>
