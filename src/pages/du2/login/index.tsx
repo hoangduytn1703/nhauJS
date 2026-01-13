@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { AuthService, DataService } from '@/core/services/mockService';
 import { useAuth } from '@/core/hooks';
 import { User, UserRole } from '@/core/types/types';
-import { Users, Lock, ChevronRight, ShieldCheck, Mail, XCircle } from 'lucide-react';
+import { Users, Lock, ChevronRight, ShieldCheck, Mail, XCircle, Eye, EyeOff } from 'lucide-react';
 
 const DU2Login: React.FC = () => {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -17,6 +17,7 @@ const DU2Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login, user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -119,16 +120,16 @@ const DU2Login: React.FC = () => {
 
                 {error && <div className="p-3 bg-red-900/30 border border-red-800 text-red-200 rounded-lg text-sm text-center">{error}</div>}
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                     <label className="flex flex-col gap-2">
-                        <span className="text-white text-xs font-bold uppercase tracking-wider opacity-60">Admin Email</span>
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+                        <span className="text-white text-sm font-bold ml-1">Admin Email</span>
+                        <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
                             <input 
                                 type="email" 
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                className="w-full h-12 bg-background border border-border rounded-xl pl-12 pr-4 text-white focus:border-primary outline-none transition-all"
+                                className="w-full h-12 bg-background border border-border rounded-xl pl-12 pr-4 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-secondary/30"
                                 placeholder="Nhập email admin"
                                 required
                             />
@@ -136,17 +137,28 @@ const DU2Login: React.FC = () => {
                     </label>
 
                     <label className="flex flex-col gap-2">
-                        <span className="text-white text-xs font-bold uppercase tracking-wider opacity-60">Authentication Key</span>
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+                        <span className="text-white text-sm font-bold ml-1">Mật khẩu</span>
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" size={20} />
                             <input 
-                                type="password" 
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
-                                className="w-full h-10 bg-background border border-border rounded-xl pl-12 pr-4 text-white focus:border-primary outline-none transition-all text-sm"
+                                className="w-full h-12 bg-background border border-border rounded-xl pl-12 pr-12 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-secondary/30"
                                 placeholder="••••••••"
                                 required
                             />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowPassword(!showPassword);
+                              }}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-white transition-colors z-10 p-1 cursor-pointer"
+                            >
+                              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
                     </label>
                 </div>
@@ -246,7 +258,7 @@ const DU2Login: React.FC = () => {
                   <button
                     onClick={handleUserConfirm}
                     disabled={!selectedUserId}
-                    className="w-full h-12 bg-primary hover:bg-primary-hover disabled:bg-gray-700 text-background font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 cursor-pointer mt-2"
+                    className="w-full h-12 bg-primary hover:bg-primary-hover disabled:bg-gray-700 disabled:cursor-not-allowed text-background font-bold text-base rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 cursor-pointer"
                   >
                     Đăng nhập.
                   </button>
@@ -256,8 +268,10 @@ const DU2Login: React.FC = () => {
           )}
         </div>
 
-        <div className="text-center">
-            <p className="text-xs text-secondary opacity-40 uppercase tracking-[0.3em]">Authorized Members Only</p>
+        <div className="text-center mt-8 opacity-0 hover:opacity-10 transition-opacity">
+            <button onClick={() => setAdminMode(true)} className="text-[10px] text-secondary uppercase tracking-[0.3em] cursor-default">
+                Authorized Members Only • Admin Portal
+            </button>
         </div>
       </div>
     </div>

@@ -2,9 +2,10 @@ import React,{ useState,useEffect } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { User,Poll,PollOption,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer } from 'lucide-react';
+import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer,QrCode } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
+import { QRGenerator } from '@/components/QRGenerator';
 
 // Helper to format date for input type="date"
 const toInputDate = (timestamp: number) => {
@@ -23,6 +24,7 @@ const Admin: React.FC = () => {
   // Modal State
   const [selectedUser,setSelectedUser] = useState<User | null>(null);
   const [editingUserStats,setEditingUserStats] = useState<User | null>(null);
+  const [showQRGenerator, setShowQRGenerator] = useState(false);
 
   // Form State
   const [editingPollId,setEditingPollId] = useState<string | null>(null);
@@ -521,6 +523,11 @@ const Admin: React.FC = () => {
         onToggleCheckIn={handleToggleAttendanceInModal}
       />
 
+      {/* --- QR GENERATOR MODAL --- */}
+      {showQRGenerator && (
+        <QRGenerator onClose={() => setShowQRGenerator(false)} polls={polls} />
+      )}
+
       {/* --- EDIT INFO MODAL (ADMIN ONLY) --- */}
       {editingUserStats && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
@@ -646,7 +653,15 @@ const Admin: React.FC = () => {
                 className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
               />
             </div>
-            {isAdmin && (
+            <button
+              onClick={() => setShowQRGenerator(true)}
+              className="h-12 px-6 bg-primary hover:bg-primary-hover text-background font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
+            >
+              <QrCode size={20} />
+              Tạo thông tin thanh toán
+            </button>
+            {/* TODO: Verify All Accounts */}
+            {/* {isAdmin && (
               <button
                 onClick={handleMigrateVerified}
                 disabled={migrating}
@@ -655,8 +670,8 @@ const Admin: React.FC = () => {
                 <Check size={20} />
                 {migrating ? 'Đang chạy...' : 'Verify All Accounts'}
               </button>
-            )}
-            {isAdmin && window.location.pathname.startsWith('/du2') && (
+            )} */}
+            {/* {isAdmin && window.location.pathname.startsWith('/du2') && (
               <button
                 onClick={async () => {
                    if(window.confirm("Khởi tạo danh sách DU2 mẫu?")) {
@@ -670,7 +685,7 @@ const Admin: React.FC = () => {
                 <Users size={20} />
                 Seed DU2 Users
               </button>
-            )}
+            )} */}
           </div>
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             <div className="overflow-x-auto">

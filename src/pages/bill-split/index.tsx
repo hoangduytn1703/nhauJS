@@ -2,7 +2,7 @@ import React,{ useState,useEffect,useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown } from 'lucide-react';
+import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle } from 'lucide-react';
 import { Link,useNavigate } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
@@ -76,6 +76,7 @@ const BillSplit: React.FC = () => {
   const [searchTerm,setSearchTerm] = useState('');
   const [sortMode,setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
   const [isDirty,setIsDirty] = useState(false);
+  const [showBillZoom, setShowBillZoom] = useState(false);
 
   // Helper to round up to nearest 1,000
   const roundToThousand = (val: number) => Math.ceil(val / 1000) * 1000;
@@ -419,11 +420,12 @@ const BillSplit: React.FC = () => {
   const currentUserItem = user && userItems[user.id];
   const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount + (currentUserItem.taxiAmount || 0)) : 0;
 
-  // VietQR URL
-  const bankBin = "970441"; // VIB
-  const bankAccount = "006563589";
-  const qrDesc = `${user?.nickname} ck`;
-  const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}`;
+  // VietQR URL - Use bank info from poll or fallback to VIB
+  const bankBin = selectedPoll?.bankInfo?.bankBin || "970441";
+  const bankAccount = selectedPoll?.bankInfo?.accountNumber || "006563589";
+  const bankName = selectedPoll?.bankInfo?.bankName || "VIB";
+  const qrDesc = `${user?.nickname} thanh toan ${selectedPoll?.title || ''}`;
+  const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(selectedPoll?.bankInfo?.accountHolder || '')}`;
 
   // Helper for deleted users
   const getDisplayUser = (uid: string) => {
@@ -438,6 +440,29 @@ const BillSplit: React.FC = () => {
 
   return (
     <div className="pb-20">
+      {/* Bill Image Zoom Modal */}
+      {showBillZoom && billImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setShowBillZoom(false)}
+        >
+          <button
+            onClick={() => setShowBillZoom(false)}
+            className="absolute top-4 right-4 text-white hover:text-primary transition-colors z-10"
+          >
+            <XCircle size={40} />
+          </button>
+          <img 
+            src={billImage} 
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-4 py-2 rounded-lg">
+            Click bên ngoài để đóng
+          </div>
+        </div>
+      )}
+
       <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-2">
@@ -495,11 +520,26 @@ const BillSplit: React.FC = () => {
             <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Camera size={18} /> Ảnh Hóa Đơn</h3>
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <div
-                onClick={() => isAdmin && fileInputRef.current?.click()}
-                className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${isAdmin ? 'cursor-pointer hover:border-primary' : 'cursor-default'}`}
+                onClick={() => {
+                  if (isAdmin) {
+                    fileInputRef.current?.click();
+                  } else if (billImage) {
+                    setShowBillZoom(true);
+                  }
+                }}
+                className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${
+                  isAdmin ? 'cursor-pointer hover:border-primary' : (billImage ? 'cursor-pointer hover:border-primary' : 'cursor-default')
+                }`}
               >
                 {billImage ? (
-                  <img src={billImage} className="w-full h-full object-contain" />
+                  <>
+                    <img src={billImage} className="w-full h-full object-contain" />
+                    {!isAdmin && (
+                      <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <div className="text-white text-sm font-bold opacity-0 hover:opacity-100 transition-opacity">Click để xem to</div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center text-secondary">
                     {isAdmin ? (
@@ -585,6 +625,47 @@ const BillSplit: React.FC = () => {
                   </>
                 ) : (
                   <div className="h-full flex flex-col justify-center">
+                    {/* Bill Breakdown for User */}
+                    {selectedPoll?.bill && currentUserItem && (
+                      <div className="bg-background p-6 rounded-xl border border-border mb-6">
+                        <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <Receipt size={18} className="text-primary" />
+                          Chi tiết bill của bạn
+                        </h4>
+                        <div className="space-y-3">
+                          {/* Base Amount */}
+                          {currentUserItem.amount > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-surface/50 rounded-lg">
+                              <span className="text-secondary text-sm">Tăng 1 (Mồi + Beer)</span>
+                              <span className="text-white font-bold font-mono">{currentUserItem.amount.toLocaleString()} đ</span>
+                            </div>
+                          )}
+                          {/* Round 2 Amount */}
+                          {currentUserItem.round2Amount > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-surface/50 rounded-lg">
+                              <span className="text-secondary text-sm">Tăng 2 (Mồi + Beer)</span>
+                              <span className="text-white font-bold font-mono">{currentUserItem.round2Amount.toLocaleString()} đ</span>
+                            </div>
+                          )}
+                          {/* Taxi Amount */}
+                          {currentUserItem.taxiAmount && currentUserItem.taxiAmount > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-surface/50 rounded-lg">
+                              <span className="text-secondary text-sm flex items-center gap-1">
+                                <Car size={14} /> Taxi
+                              </span>
+                              <span className="text-white font-bold font-mono">{currentUserItem.taxiAmount.toLocaleString()} đ</span>
+                            </div>
+                          )}
+                          {/* Total */}
+                          <div className="flex justify-between items-center p-4 bg-primary/10 border border-primary/30 rounded-lg mt-4">
+                            <span className="text-primary font-bold">TỔNG CỘNG</span>
+                            <span className="text-primary font-black text-2xl font-mono">{userTotalAmount.toLocaleString()} đ</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Info */}
                     <div className="bg-background p-6 rounded-xl border border-border">
                       <h4 className="text-xl font-bold text-primary mb-4 text-center">Thông tin thanh toán</h4>
 
@@ -592,36 +673,38 @@ const BillSplit: React.FC = () => {
                         {/* QR Block */}
                         <div className="bg-white p-3 rounded-lg shadow-lg shrink-0 mx-auto md:mx-0">
                           <img src={vietQrUrl} className="w-40 h-40 object-contain" alt="VietQR" />
-                          <div className="text-center text-black text-xs font-bold mt-1">VIB: {bankAccount}</div>
+                          <div className="text-center text-black text-xs font-bold mt-1">{bankName}: {bankAccount}</div>
                         </div>
 
                         {/* Text Info */}
                         <div className="flex-1 space-y-4 w-full">
                           <div className="p-3 bg-surface border border-border rounded-lg flex justify-between items-center">
                             <div>
-                              <div className="text-xs text-secondary">Ngân hàng VIB</div>
+                              <div className="text-xs text-secondary">Ngân hàng {bankName}</div>
                               <div className="text-white font-bold font-mono text-lg">{bankAccount}</div>
                             </div>
                             <button
-                              onClick={() => { navigator.clipboard.writeText(bankAccount); alert('Copied VIB') }}
+                              onClick={() => { navigator.clipboard.writeText(bankAccount); alert(`Copied ${bankName}`) }}
                               className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
                             >
                               <Copy size={16} />
                             </button>
                           </div>
 
-                          <div className="p-3 bg-surface border border-border rounded-lg flex justify-between items-center">
-                            <div>
-                              <div className="text-xs text-secondary">Momo</div>
-                              <div className="text-white font-bold font-mono text-lg">0798889162</div>
+                          {selectedPoll?.bankInfo?.momoNumber && (
+                            <div className="p-3 bg-surface border border-border rounded-lg flex justify-between items-center">
+                              <div>
+                                <div className="text-xs text-secondary">Momo</div>
+                                <div className="text-white font-bold font-mono text-lg">{selectedPoll.bankInfo.momoNumber}</div>
+                              </div>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(selectedPoll.bankInfo!.momoNumber!); alert('Copied Momo') }}
+                                className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
+                              >
+                                <Copy size={16} />
+                              </button>
                             </div>
-                            <button
-                              onClick={() => { navigator.clipboard.writeText("0798889162"); alert('Copied Momo') }}
-                              className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
-                            >
-                              <Copy size={16} />
-                            </button>
-                          </div>
+                          )}
 
                           <div className="text-sm text-secondary text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
                             Nội dung CK: <span className="text-white font-bold select-all">"ghi tên vào nhé"</span>

@@ -266,6 +266,11 @@ export const DataService = {
       await updateDoc(pollRef, { bill });
   },
 
+  saveBankInfo: async (pollId: string, bankInfo: { bankName: string; bankBin: string; accountNumber: string; accountHolder: string; momoNumber?: string }): Promise<void> => {
+      const pollRef = doc(db, getColl("polls"), pollId);
+      await updateDoc(pollRef, { bankInfo });
+  },
+
   // --- LOGIC BÙNG KÈO & REDEMPTION (Participation) ---
   submitParticipation: async (pollId: string, userId: string, status: 'JOIN' | 'DECLINE', reason?: string): Promise<void> => {
     const pollRef = doc(db, getColl("polls"), pollId);

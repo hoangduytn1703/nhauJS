@@ -53,7 +53,7 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 BXH
               </Link>
               <Link to={getLink('/bills')} className={`text-sm font-bold hover:text-primary transition-colors ${isActive(getLink('/bills')) ? 'text-primary' : 'text-secondary'}`}>
-                {isDU2 ? 'Tài chính' : 'Tính Tiền'}
+                Tính Tiền
               </Link>
               {user.role === UserRole.ADMIN && (
                 <Link to={getLink('/admin')} className={`text-sm font-bold hover:text-primary transition-colors ${isActive(getLink('/admin')) ? 'text-primary' : 'text-secondary'}`}>
