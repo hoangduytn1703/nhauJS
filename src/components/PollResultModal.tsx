@@ -6,9 +6,11 @@ interface PollResultModalProps {
   poll: Poll | null;
   users: User[];
   onClose: () => void;
+  isAdmin?: boolean;
+  onToggleCheckIn?: (pollId: string, userId: string) => Promise<void>;
 }
 
-export const PollResultModal: React.FC<PollResultModalProps> = ({ poll,users,onClose }) => {
+export const PollResultModal: React.FC<PollResultModalProps> = ({ poll, users, onClose, isAdmin = false, onToggleCheckIn }) => {
   if (!poll) return null;
 
   const getWinners = (options: any[]) => {
@@ -135,7 +137,13 @@ export const PollResultModal: React.FC<PollResultModalProps> = ({ poll,users,onC
                   {attendedIds.map(uid => {
                     const u = getUserDetails(uid);
                     return (
-                      <div key={uid} className="flex items-center gap-3 bg-surface p-3 rounded-xl border border-border">
+                      <div 
+                        key={uid} 
+                        onClick={() => isAdmin && onToggleCheckIn && onToggleCheckIn(poll.id, uid)}
+                        className={`flex items-center gap-3 bg-surface p-3 rounded-xl border border-border ${
+                          isAdmin ? 'cursor-pointer hover:border-primary transition-all hover:scale-105' : ''
+                        }`}
+                      >
                         <img src={u.avatar} className="w-10 h-10 rounded-full object-cover border border-secondary/30" />
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-white text-sm truncate uppercase">{u.name}</div>
@@ -146,6 +154,9 @@ export const PollResultModal: React.FC<PollResultModalProps> = ({ poll,users,onC
                             )}
                           </div>
                         </div>
+                        {isAdmin && (
+                          <div className="text-[10px] text-green-400 font-bold shrink-0">✓</div>
+                        )}
                       </div>
                     );
                   })}
@@ -166,12 +177,21 @@ export const PollResultModal: React.FC<PollResultModalProps> = ({ poll,users,onC
                   {flakedIds.map(uid => {
                     const u = getUserDetails(uid);
                     return (
-                      <div key={uid} className="flex items-center gap-3 bg-background p-3 rounded-xl border border-red-500/20">
+                      <div 
+                        key={uid} 
+                        onClick={() => isAdmin && onToggleCheckIn && onToggleCheckIn(poll.id, uid)}
+                        className={`flex items-center gap-3 bg-background p-3 rounded-xl border border-red-500/20 ${
+                          isAdmin ? 'cursor-pointer hover:border-yellow-500 transition-all hover:scale-105' : ''
+                        }`}
+                      >
                         <img src={u.avatar} className="w-10 h-10 rounded-full object-cover grayscale opacity-70" />
                         <div className="min-w-0">
                           <div className="font-bold text-red-300 text-sm truncate uppercase">{u.name}</div>
                           <div className="text-xs text-red-400/60 truncate font-bold">Chưa check-in</div>
                         </div>
+                        {isAdmin && (
+                          <div className="text-[10px] text-yellow-400 font-bold shrink-0 animate-pulse">CLICK</div>
+                        )}
                       </div>
                     );
                   })}

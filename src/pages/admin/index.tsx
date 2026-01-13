@@ -32,6 +32,8 @@ const Admin: React.FC = () => {
   const [deadlineDate,setDeadlineDate] = useState<string>(''); // YYYY-MM-DD
   const [resultDate,setResultDate] = useState<string>(''); // YYYY-MM-DD
   const [enableTaxi,setEnableTaxi] = useState(false);
+  const [allowMemberAddPlaces, setAllowMemberAddPlaces] = useState(true);
+  const [allowMemberAddTimes, setAllowMemberAddTimes] = useState(true);
 
   // Location Options State
   const [pollOptions,setPollOptions] = useState<{ id?: string,text: string,description: string,notes: string,image?: string,createdBy?: string,votes?: string[] }[]>([
@@ -159,6 +161,8 @@ const Admin: React.FC = () => {
     setDeadlineDate(toInputDate(poll.deadline));
     setResultDate(toInputDate(poll.resultDate));
     setEnableTaxi(poll.enableTaxi || false);
+    setAllowMemberAddPlaces(poll.allowMemberAddPlaces ?? true);
+    setAllowMemberAddTimes(poll.allowMemberAddTimes ?? true);
 
     const formOptions = poll.options.map(o => ({
       id: o.id,
@@ -201,6 +205,8 @@ const Admin: React.FC = () => {
     setDeadlineDate('');
     setResultDate('');
     setEnableTaxi(false);
+    setAllowMemberAddPlaces(true);
+    setAllowMemberAddTimes(true);
     setPollOptions([{ text: '',description: '',notes: '',image: '' },{ text: '',description: '',notes: '',image: '' }]);
     setTimeOptions([{ text: '' },{ text: '' }]);
     setSelectedFinalTime('');
@@ -219,7 +225,7 @@ const Admin: React.FC = () => {
     if (!user || !isAdmin) return;
 
     const validOptions = pollOptions.filter(o => o.text.trim() !== '');
-    if (validOptions.length < 2) return alert('Cần ít nhất 2 địa điểm');
+    // Removed: if (validOptions.length < 2) return alert('Cần ít nhất 2 địa điểm');
 
     const validTimeOptions = timeOptions.filter(t => t.text.trim() !== '').map(t => t.text);
     if (validTimeOptions.length < 1) return alert('Cần ít nhất 1 ngày đề xuất');
@@ -234,6 +240,8 @@ const Admin: React.FC = () => {
       status: 'OPEN' as const,
       createdBy: user.id,
       isHidden: false,
+      allowMemberAddPlaces,
+      allowMemberAddTimes,
     };
 
     try {
@@ -374,6 +382,16 @@ const Admin: React.FC = () => {
     }
   };
 
+  const handleToggleAttendanceInModal = async (pollId: string, userId: string) => {
+    await handleToggleAttendance(pollId, userId);
+    // Refresh modal data
+    const updatedPolls = await DataService.getPolls();
+    const updatedPoll = updatedPolls.find(p => p.id === pollId);
+    if (updatedPoll) {
+      setViewResultPoll(updatedPoll);
+    }
+  };
+
   const handleToggleFlake = async (pollId: string,userId: string) => {
     if (!isAdmin) return;
     try {
@@ -499,6 +517,8 @@ const Admin: React.FC = () => {
         poll={viewResultPoll}
         users={users}
         onClose={() => setViewResultPoll(null)}
+        isAdmin={true}
+        onToggleCheckIn={handleToggleAttendanceInModal}
       />
 
       {/* --- EDIT INFO MODAL (ADMIN ONLY) --- */}
@@ -816,6 +836,26 @@ const Admin: React.FC = () => {
                     <div>
                       <div className="text-sm font-bold text-white">Tính năng Taxi 🚕</div>
                       <div className="text-xs text-secondary">Hỏi xem ai sẽ đi taxi tới quán</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border cursor-pointer" onClick={() => setAllowMemberAddPlaces(!allowMemberAddPlaces)}>
+                    <div className={`w-10 h-6 rounded-full p-1 transition-colors ${allowMemberAddPlaces ? 'bg-primary' : 'bg-surface border border-secondary'}`}>
+                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${allowMemberAddPlaces ? 'translate-x-4' : ''}`}></div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">Member được thêm quán 📍</div>
+                      <div className="text-xs text-secondary">Cho phép người dùng đề xuất địa điểm mới</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border cursor-pointer" onClick={() => setAllowMemberAddTimes(!allowMemberAddTimes)}>
+                    <div className={`w-10 h-6 rounded-full p-1 transition-colors ${allowMemberAddTimes ? 'bg-primary' : 'bg-surface border border-secondary'}`}>
+                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${allowMemberAddTimes ? 'translate-x-4' : ''}`}></div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">Member được thêm ngày 📅</div>
+                      <div className="text-xs text-secondary">Cho phép người dùng đề xuất ngày nhậu mới</div>
                     </div>
                   </div>
                 </div>

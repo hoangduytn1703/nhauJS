@@ -62,18 +62,16 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link to={getLink('/profile')}>
-                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full border-2 bg-cover bg-center transition-all ${isActive(getLink('/profile')) ? 'border-primary' : 'border-transparent'}`}
-                  style={{ backgroundImage: `url(${user.avatar})` }}>
-                </div>
-              </Link>
-              {( !isDU2 || user.role === UserRole.ADMIN ) && (
+              <div className="flex items-center gap-3">
+                <Link to={getLink('/profile')}>
+                  <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full border-2 bg-cover bg-center transition-all ${isActive(getLink('/profile')) ? 'border-primary' : 'border-transparent'}`}
+                    style={{ backgroundImage: `url(${user.avatar})` }}>
+                  </div>
+                </Link>
                 <button onClick={logout} className="hidden md:block p-2 text-secondary hover:text-red-400 transition-colors cursor-pointer" title="Đăng xuất">
                   <LogOut size={20} />
                 </button>
-              )}
-            </div>
+              </div>
           </div>
         )}
       </nav>
@@ -104,12 +102,10 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <span className="text-[10px] font-medium">Bill</span>
           </Link>
 
-          {( !isDU2 || user.role === UserRole.ADMIN ) && (
-            <button onClick={logout} className="flex flex-col items-center gap-1 p-2 rounded-lg text-secondary active:text-red-400 cursor-pointer">
-              <LogOut size={22} />
-              <span className="text-[10px] font-medium">Thoát</span>
-            </button>
-          )}
+          <button onClick={logout} className="flex flex-col items-center gap-1 p-2 rounded-lg text-secondary active:text-red-400 cursor-pointer">
+            <LogOut size={22} />
+            <span className="text-[10px] font-medium">Thoát</span>
+          </button>
         </div>
       )}
     </div>

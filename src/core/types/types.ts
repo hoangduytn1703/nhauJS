@@ -95,6 +95,10 @@ export interface Poll {
   // Taxi Feature
   enableTaxi?: boolean;
   taxiVoters?: string[];
+
+  // Addition Permission (New)
+  allowMemberAddPlaces?: boolean;
+  allowMemberAddTimes?: boolean;
 }
 
 export interface DrinkStats {
