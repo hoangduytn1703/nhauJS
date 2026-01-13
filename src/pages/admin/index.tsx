@@ -1,10 +1,11 @@
 import React,{ useState,useEffect } from 'react';
-import { DataService } from '@/core/services/mockService';
+import { DataService, SettingsService } from '@/core/services/mockService';
 import { User,Poll,PollOption,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer } from 'lucide-react';
+import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer,QrCode } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
+import { QRGenerator } from '@/components/QRGenerator';
 
 // Helper to format date for input type="date"
 const toInputDate = (timestamp: number) => {
@@ -23,6 +24,9 @@ const Admin: React.FC = () => {
   // Modal State
   const [selectedUser,setSelectedUser] = useState<User | null>(null);
   const [editingUserStats,setEditingUserStats] = useState<User | null>(null);
+  const [showQRGenerator, setShowQRGenerator] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [updatingSettings, setUpdatingSettings] = useState(false);
 
   // Form State
   const [editingPollId,setEditingPollId] = useState<string | null>(null);
@@ -75,6 +79,21 @@ const Admin: React.FC = () => {
     flakeCount: 0
   });
 
+  const handleToggleRegistration = async () => {
+    setUpdatingSettings(true);
+    try {
+      const newVal = !registrationEnabled;
+      await SettingsService.updateSettings({ registrationEnabled: newVal });
+      setRegistrationEnabled(newVal);
+      // alert(`Đã ${newVal ? 'BẬT' : 'TẮT'} đăng ký thành viên mới`);
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi khi cập nhật cài đặt!");
+    } finally {
+      setUpdatingSettings(false);
+    }
+  };
+
   const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
@@ -83,12 +102,14 @@ const Admin: React.FC = () => {
 
   const refreshData = async () => {
     try {
-      const [uData,pData] = await Promise.all([
+      const [uData,pData,settings] = await Promise.all([
         DataService.getUsers(),
-        DataService.getPolls()
+        DataService.getPolls(),
+        SettingsService.getSettings()
       ]);
       setUsers(uData);
       setPolls(pData);
+      setRegistrationEnabled(settings.registrationEnabled);
     } catch (e) {
       console.error(e);
     } finally {
@@ -521,6 +542,11 @@ const Admin: React.FC = () => {
         onToggleCheckIn={handleToggleAttendanceInModal}
       />
 
+      {/* --- QR GENERATOR MODAL --- */}
+      {showQRGenerator && (
+        <QRGenerator onClose={() => setShowQRGenerator(false)} polls={polls} />
+      )}
+
       {/* --- EDIT INFO MODAL (ADMIN ONLY) --- */}
       {editingUserStats && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
@@ -646,7 +672,31 @@ const Admin: React.FC = () => {
                 className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
               />
             </div>
-            {isAdmin && (
+            <button
+              onClick={() => setShowQRGenerator(true)}
+              className="h-12 px-6 bg-primary hover:bg-primary-hover text-background font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
+            >
+              <QrCode size={20} />
+              Tạo thông tin thanh toán
+            </button>
+
+            {/* Registration Toggle - Team Nhậu only */}
+            {!window.location.pathname.startsWith('/du2') && (
+              <button
+                onClick={handleToggleRegistration}
+                disabled={updatingSettings}
+                className={`h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0 ${
+                  registrationEnabled 
+                    ? 'bg-green-600/20 text-green-400 border border-green-600/50 hover:bg-green-600/30' 
+                    : 'bg-red-600/20 text-red-400 border border-red-600/50 hover:bg-red-600/30'
+                }`}
+              >
+                {registrationEnabled ? <Check size={20} /> : <Ban size={20} />}
+                {registrationEnabled ? 'Cho phép Đăng ký: ON' : 'Cho phép Đăng ký: OFF'}
+              </button>
+            )}
+            {/* TODO: Verify All Accounts */}
+            {/* {isAdmin && (
               <button
                 onClick={handleMigrateVerified}
                 disabled={migrating}
@@ -655,8 +705,8 @@ const Admin: React.FC = () => {
                 <Check size={20} />
                 {migrating ? 'Đang chạy...' : 'Verify All Accounts'}
               </button>
-            )}
-            {isAdmin && window.location.pathname.startsWith('/du2') && (
+            )} */}
+            {/* {isAdmin && window.location.pathname.startsWith('/du2') && (
               <button
                 onClick={async () => {
                    if(window.confirm("Khởi tạo danh sách DU2 mẫu?")) {
@@ -670,7 +720,7 @@ const Admin: React.FC = () => {
                 <Users size={20} />
                 Seed DU2 Users
               </button>
-            )}
+            )} */}
           </div>
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             <div className="overflow-x-auto">

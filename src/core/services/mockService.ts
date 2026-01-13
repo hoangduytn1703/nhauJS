@@ -152,6 +152,20 @@ export const AuthService = {
   }
 };
 
+export const SettingsService = {
+  getSettings: async (): Promise<{ registrationEnabled: boolean }> => {
+    // Only for Team Nhậu (ignore isDU2 logic here or force it to use main collection)
+    const docSnap = await getDoc(doc(db, "settings", "registration"));
+    if (docSnap.exists()) {
+      return docSnap.data() as { registrationEnabled: boolean };
+    }
+    return { registrationEnabled: true }; // Default
+  },
+  updateSettings: async (data: { registrationEnabled: boolean }): Promise<void> => {
+    await setDoc(doc(db, "settings", "registration"), data, { merge: true });
+  }
+};
+
 export const DataService = {
   getUser: async (userId: string): Promise<User | null> => {
     const snap = await getDoc(doc(db, getColl("users"), userId));
@@ -264,6 +278,11 @@ export const DataService = {
   updateBill: async (pollId: string, bill: BillInfo): Promise<void> => {
       const pollRef = doc(db, getColl("polls"), pollId);
       await updateDoc(pollRef, { bill });
+  },
+
+  saveBankInfo: async (pollId: string, bankInfo: { bankName: string; bankBin: string; accountNumber: string; accountHolder: string; momoNumber?: string }): Promise<void> => {
+      const pollRef = doc(db, getColl("polls"), pollId);
+      await updateDoc(pollRef, { bankInfo });
   },
 
   // --- LOGIC BÙNG KÈO & REDEMPTION (Participation) ---

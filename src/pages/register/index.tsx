@@ -14,6 +14,16 @@ const Register: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    import('@/core/services/mockService').then(({ SettingsService }) => {
+      SettingsService.getSettings().then(s => {
+        if (!s.registrationEnabled) {
+          navigate('/login');
+        }
+      });
+    });
+  }, [navigate]);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

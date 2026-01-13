@@ -92,6 +92,15 @@ export interface Poll {
   // Bill Split Feature
   bill?: BillInfo;
 
+  // Bank Info for QR Payment
+  bankInfo?: {
+    bankName: string;
+    bankBin: string;
+    accountNumber: string;
+    accountHolder: string;
+    momoNumber?: string;
+  };
+
   // Taxi Feature
   enableTaxi?: boolean;
   taxiVoters?: string[];
