@@ -68,9 +68,12 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                     style={{ backgroundImage: `url(${user.avatar})` }}>
                   </div>
                 </Link>
-                <button onClick={logout} className="hidden md:block p-2 text-secondary hover:text-red-400 transition-colors cursor-pointer" title="Đăng xuất">
-                  <LogOut size={20} />
-                </button>
+                {/*TODO: Temporarily disabled for DU2 debugging */}
+                {/* {( !isDU2 || user.role === UserRole.ADMIN ) && ( */}
+                  <button onClick={logout} className="hidden md:block p-2 text-secondary hover:text-red-400 transition-colors cursor-pointer" title="Đăng xuất">
+                    <LogOut size={20} />
+                  </button>
+                {/* )} */}
               </div>
           </div>
         )}
@@ -102,10 +105,13 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <span className="text-[10px] font-medium">Bill</span>
           </Link>
 
-          <button onClick={logout} className="flex flex-col items-center gap-1 p-2 rounded-lg text-secondary active:text-red-400 cursor-pointer">
-            <LogOut size={22} />
-            <span className="text-[10px] font-medium">Thoát</span>
-          </button>
+          {/* Temporarily disabled for DU2 debugging */}
+          {( !isDU2 || user.role === UserRole.ADMIN ) && (
+            <button onClick={logout} className="flex flex-col items-center gap-1 p-2 rounded-lg text-secondary active:text-red-400 cursor-pointer">
+              <LogOut size={22} />
+              <span className="text-[10px] font-medium">Thoát</span>
+            </button>
+          )}
         </div>
       )}
     </div>
