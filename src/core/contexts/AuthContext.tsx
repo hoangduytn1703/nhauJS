@@ -16,21 +16,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isDU2 = () => window.location.pathname.startsWith('/du2');
+  const storageKey = isDU2() ? 'du2_user' : 'nhau_user';
+
   const login = (userData: User, remember: boolean) => {
     setUser(userData);
     if (remember) {
-      localStorage.setItem('nhau_user', JSON.stringify(userData));
-      sessionStorage.removeItem('nhau_user');
+      localStorage.setItem(storageKey, JSON.stringify(userData));
+      sessionStorage.removeItem(storageKey);
     } else {
-      sessionStorage.setItem('nhau_user', JSON.stringify(userData));
-      localStorage.removeItem('nhau_user');
+      sessionStorage.setItem(storageKey, JSON.stringify(userData));
+      localStorage.removeItem(storageKey);
     }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('nhau_user');
-    sessionStorage.removeItem('nhau_user');
+    localStorage.removeItem(storageKey);
+    sessionStorage.removeItem(storageKey);
   };
 
   const updateUser = (data: Partial<User>) => {
@@ -42,10 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       const updated = { ...user, ...data };
       setUser(updated);
-      if (localStorage.getItem('nhau_user')) {
-        localStorage.setItem('nhau_user', JSON.stringify(updated));
+      if (localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, JSON.stringify(updated));
       } else {
-        sessionStorage.setItem('nhau_user', JSON.stringify(updated));
+        sessionStorage.setItem(storageKey, JSON.stringify(updated));
       }
     }
   };
@@ -53,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const stored = localStorage.getItem('nhau_user') || sessionStorage.getItem('nhau_user');
+        const stored = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey);
 
         if (stored) {
           const localUser = JSON.parse(stored);
@@ -62,23 +65,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const freshUser = await DataService.getUser(localUser.id);
           if (freshUser) {
             setUser(freshUser);
-            if (localStorage.getItem('nhau_user')) {
-              localStorage.setItem('nhau_user', JSON.stringify(freshUser));
+            if (localStorage.getItem(storageKey)) {
+              localStorage.setItem(storageKey, JSON.stringify(freshUser));
             } else {
-              sessionStorage.setItem('nhau_user', JSON.stringify(freshUser));
+              sessionStorage.setItem(storageKey, JSON.stringify(freshUser));
             }
           }
         }
       } catch (e) {
         console.error("Failed to sync user profile", e);
-        localStorage.removeItem('nhau_user');
-        sessionStorage.removeItem('nhau_user');
+        localStorage.removeItem(storageKey);
+        sessionStorage.removeItem(storageKey);
       } finally {
         setLoading(false);
       }
     };
     initAuth();
-  }, []);
+  }, [window.location.pathname]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>

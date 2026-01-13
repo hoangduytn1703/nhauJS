@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 import { BaseLayout } from '@/templates/BaseLayout';
 import { ProtectedRoute, PublicRoute } from './guards';
 import Login from '@/pages/login';
+import DU2Login from '@/pages/du2/login';
 import Register from '@/pages/register';
 import Profile from '@/pages/profile';
 import Vote from '@/pages/vote';
@@ -14,7 +15,7 @@ export const router = createBrowserRouter([
   {
     element: <BaseLayout><Outlet /></BaseLayout>,
     children: [
-      // Public routes (guest only)
+      // --- NHAU JS ROUTES ---
       {
         element: <PublicRoute />,
         children: [
@@ -22,7 +23,6 @@ export const router = createBrowserRouter([
           { path: '/register', element: <Register /> },
         ],
       },
-      // Protected routes (authenticated only)
       {
         element: <ProtectedRoute />,
         children: [
@@ -34,6 +34,31 @@ export const router = createBrowserRouter([
           { path: '/admin', element: <Admin /> },
         ],
       },
+
+      // --- DU2 WE ARE ONE ROUTES ---
+      {
+        path: '/du2',
+        children: [
+          {
+            element: <PublicRoute />,
+            children: [
+              { path: '/du2/login', element: <DU2Login /> },
+            ],
+          },
+          {
+            element: <ProtectedRoute />,
+            children: [
+              { index: true, element: <Vote /> },
+              { path: '/du2/profile', element: <Profile /> },
+              { path: '/du2/leaderboard', element: <Leaderboard /> },
+              { path: '/du2/bills', element: <BillSplit /> },
+              { path: '/du2/members', element: <Members /> },
+              { path: '/du2/admin', element: <Admin /> },
+            ],
+          },
+        ],
+      },
+
       // Catch all
       { path: '*', element: <Navigate to="/" replace /> },
     ],

@@ -2,7 +2,7 @@ import React,{ useState,useEffect } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { User,Poll,PollOption,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Search,Plus,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer } from 'lucide-react';
+import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer } from 'lucide-react';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { PollResultModal } from '@/components/PollResultModal';
 
@@ -61,6 +61,9 @@ const Admin: React.FC = () => {
   // View Results Modal State
   const [viewResultPoll,setViewResultPoll] = useState<Poll | null>(null);
 
+  // Migration State
+  const [migrating, setMigrating] = useState(false);
+
   // User Info Edit State
   const [statsForm,setStatsForm] = useState({
     name: '',
@@ -90,6 +93,21 @@ const Admin: React.FC = () => {
       setLoading(false);
     }
   }
+
+  const handleMigrateVerified = async () => {
+    if (!window.confirm("Xác nhận cấp trạng thái 'Đã xác thực email' cho tất cả account cũ?")) return;
+    setMigrating(true);
+    try {
+      const res = await DataService.migrateEmailVerification();
+      alert(`Đã cập nhật ${res.updated} tài khoản!`);
+      refreshData();
+    } catch (e) {
+      alert("Lỗi khi chạy query");
+      console.error(e);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   // --- STATS EDITING ---
   const handleEditStatsClick = (u: User) => {
@@ -597,15 +615,42 @@ const Admin: React.FC = () => {
 
       {activeTab === 'USERS' && (
         <div className="flex flex-col gap-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={20} />
-            <input
-              type="text"
-              placeholder="Tìm kiếm thành viên (Tên, Email)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
-            />
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={20} />
+              <input
+                type="text"
+                placeholder="Tìm kiếm thành viên (Tên, Email)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-surface border border-border rounded-xl h-12 pl-12 pr-4 text-white focus:border-primary outline-none"
+              />
+            </div>
+            {isAdmin && (
+              <button
+                onClick={handleMigrateVerified}
+                disabled={migrating}
+                className="h-12 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
+              >
+                <Check size={20} />
+                {migrating ? 'Đang chạy...' : 'Verify All Accounts'}
+              </button>
+            )}
+            {isAdmin && window.location.pathname.startsWith('/du2') && (
+              <button
+                onClick={async () => {
+                   if(window.confirm("Khởi tạo danh sách DU2 mẫu?")) {
+                       await DataService.seedDU2Users();
+                       alert("Đã khởi tạo!");
+                       refreshData();
+                   }
+                }}
+                className="h-12 px-6 bg-blue-600 hover:bg-blue-600 disabled:bg-gray-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
+              >
+                <Users size={20} />
+                Seed DU2 Users
+              </button>
+            )}
           </div>
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
