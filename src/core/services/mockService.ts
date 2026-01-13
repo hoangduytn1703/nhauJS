@@ -152,6 +152,20 @@ export const AuthService = {
   }
 };
 
+export const SettingsService = {
+  getSettings: async (): Promise<{ registrationEnabled: boolean }> => {
+    // Only for Team Nhậu (ignore isDU2 logic here or force it to use main collection)
+    const docSnap = await getDoc(doc(db, "settings", "registration"));
+    if (docSnap.exists()) {
+      return docSnap.data() as { registrationEnabled: boolean };
+    }
+    return { registrationEnabled: true }; // Default
+  },
+  updateSettings: async (data: { registrationEnabled: boolean }): Promise<void> => {
+    await setDoc(doc(db, "settings", "registration"), data, { merge: true });
+  }
+};
+
 export const DataService = {
   getUser: async (userId: string): Promise<User | null> => {
     const snap = await getDoc(doc(db, getColl("users"), userId));

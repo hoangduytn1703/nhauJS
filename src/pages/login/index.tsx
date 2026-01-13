@@ -1,6 +1,6 @@
 import React,{ useState } from 'react';
 import { useNavigate,Link } from 'react-router';
-import { AuthService } from '@/core/services/mockService';
+import { AuthService, SettingsService } from '@/core/services/mockService';
 import { useAuth } from '@/core/hooks';
 import { Beer,Mail,Lock,Eye,EyeOff,CheckSquare,Square,XCircle } from 'lucide-react';
 
@@ -11,6 +11,7 @@ const Login: React.FC = () => {
   const [rememberMe,setRememberMe] = useState(true);
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState('');
+  const [regEnabled,setRegEnabled] = useState(true);
 
   // Forgot Password State
   const [showForgot,setShowForgot] = useState(false);
@@ -19,6 +20,10 @@ const Login: React.FC = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    SettingsService.getSettings().then(s => setRegEnabled(s.registrationEnabled));
+  },[]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,10 +71,20 @@ const Login: React.FC = () => {
             </div>
           </div>
           <h3 className="relative z-10 text-2xl font-black text-white mb-2">Chưa có vé?</h3>
-          <p className="relative z-10 text-secondary text-sm mb-6">Đăng ký ngay để không bỏ lỡ những kèo nhậu chất lượng nhất!</p>
-          <Link to="/register" className="relative z-10 border border-secondary text-secondary hover:bg-secondary hover:text-background px-6 py-2 rounded-full text-sm font-bold transition-all">
-            Đăng ký tài khoản
-          </Link>
+          <p className="relative z-10 text-secondary text-sm mb-6">
+            {regEnabled 
+              ? 'Đăng ký ngay để không bỏ lỡ những kèo nhậu chất lượng nhất!' 
+              : 'Tính năng đăng ký hiện đang tạm đóng. Liên hệ Admin để tham gia!'}
+          </p>
+          {regEnabled ? (
+            <Link to="/register" className="relative z-10 border border-secondary text-secondary hover:bg-secondary hover:text-background px-6 py-2 rounded-full text-sm font-bold transition-all">
+              Đăng ký tài khoản
+            </Link>
+          ) : (
+            <div className="relative z-10 border border-secondary/30 text-secondary/30 px-6 py-2 rounded-full text-sm font-bold cursor-not-allowed">
+              Đăng ký tạm đóng
+            </div>
+          )}
         </div>
 
         {/* Right Side Form */}
@@ -149,7 +164,11 @@ const Login: React.FC = () => {
 
           <div className="text-center mt-6 md:hidden">
             <p className="text-sm text-secondary">
-              Chưa có vé? <Link to="/register" className="text-primary font-bold hover:underline">Đăng ký ngay</Link>
+              Chưa có vé? {regEnabled ? (
+                <Link to="/register" className="text-primary font-bold hover:underline">Đăng ký ngay</Link>
+              ) : (
+                <span className="text-secondary/50 font-bold">Đăng ký lọc</span>
+              )}
             </p>
           </div>
         </div>

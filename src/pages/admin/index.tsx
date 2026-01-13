@@ -1,5 +1,5 @@
 import React,{ useState,useEffect } from 'react';
-import { DataService } from '@/core/services/mockService';
+import { DataService, SettingsService } from '@/core/services/mockService';
 import { User,Poll,PollOption,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
 import { Search,Plus,Users,Trash2,Edit2,Calendar,MapPin,Clock,Eye,Gavel,Check,Ban,AlertTriangle,Settings,Save,XCircle,RefreshCw,EyeOff,StickyNote,Trophy,Beer,QrCode } from 'lucide-react';
@@ -25,6 +25,8 @@ const Admin: React.FC = () => {
   const [selectedUser,setSelectedUser] = useState<User | null>(null);
   const [editingUserStats,setEditingUserStats] = useState<User | null>(null);
   const [showQRGenerator, setShowQRGenerator] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [updatingSettings, setUpdatingSettings] = useState(false);
 
   // Form State
   const [editingPollId,setEditingPollId] = useState<string | null>(null);
@@ -77,6 +79,21 @@ const Admin: React.FC = () => {
     flakeCount: 0
   });
 
+  const handleToggleRegistration = async () => {
+    setUpdatingSettings(true);
+    try {
+      const newVal = !registrationEnabled;
+      await SettingsService.updateSettings({ registrationEnabled: newVal });
+      setRegistrationEnabled(newVal);
+      // alert(`Đã ${newVal ? 'BẬT' : 'TẮT'} đăng ký thành viên mới`);
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi khi cập nhật cài đặt!");
+    } finally {
+      setUpdatingSettings(false);
+    }
+  };
+
   const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
@@ -85,12 +102,14 @@ const Admin: React.FC = () => {
 
   const refreshData = async () => {
     try {
-      const [uData,pData] = await Promise.all([
+      const [uData,pData,settings] = await Promise.all([
         DataService.getUsers(),
-        DataService.getPolls()
+        DataService.getPolls(),
+        SettingsService.getSettings()
       ]);
       setUsers(uData);
       setPolls(pData);
+      setRegistrationEnabled(settings.registrationEnabled);
     } catch (e) {
       console.error(e);
     } finally {
@@ -660,6 +679,22 @@ const Admin: React.FC = () => {
               <QrCode size={20} />
               Tạo thông tin thanh toán
             </button>
+
+            {/* Registration Toggle - Team Nhậu only */}
+            {!window.location.pathname.startsWith('/du2') && (
+              <button
+                onClick={handleToggleRegistration}
+                disabled={updatingSettings}
+                className={`h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg cursor-pointer shrink-0 ${
+                  registrationEnabled 
+                    ? 'bg-green-600/20 text-green-400 border border-green-600/50 hover:bg-green-600/30' 
+                    : 'bg-red-600/20 text-red-400 border border-red-600/50 hover:bg-red-600/30'
+                }`}
+              >
+                {registrationEnabled ? <Check size={20} /> : <Ban size={20} />}
+                {registrationEnabled ? 'Cho phép Đăng ký: ON' : 'Cho phép Đăng ký: OFF'}
+              </button>
+            )}
             {/* TODO: Verify All Accounts */}
             {/* {isAdmin && (
               <button
