@@ -4,9 +4,10 @@ import { Poll,User } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
 import { Receipt, Search, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
-
+    
 // This is a public view page for those with only-bill access
 const OnlyBillView: React.FC = () => {
+    const currentYear = new Date().getFullYear();
     const { user } = useAuth();
     const [polls,setPolls] = useState<Poll[]>([]);
     const [users,setUsers] = useState<Record<string,User>>({});
@@ -114,9 +115,9 @@ const OnlyBillView: React.FC = () => {
             </div>
 
             <footer className="mt-20 text-center border-t border-border pt-10">
-                <Link to="/" className="text-secondary hover:text-white inline-flex items-center gap-2 font-bold transition-all">
-                    <ArrowLeft size={16} /> Quay lại trang chủ Nhậu JS
-                </Link>
+                <p className="cursor-pointer text-secondary hover:text-white inline-flex items-center gap-2 font-bold transition-all">
+                    © 2021-{currentYear} Nhậu JS. All Right Reserved.
+                </p>
             </footer>
         </div>
     );

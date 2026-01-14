@@ -44,6 +44,15 @@ const Register: React.FC = () => {
     }
 
     try {
+      // Double check settings before submitting
+      const { SettingsService } = await import('@/core/services/mockService');
+      const settings = await SettingsService.getSettings();
+      if (!settings.registrationEnabled) {
+          setError("Hiện tại hệ thống đang tạm đóng cổng đăng ký thành viên mới.");
+          setLoading(false);
+          return;
+      }
+
       await AuthService.register(email, name, password);
       setRegisteredSuccess(true);
     } catch (err: any) {
