@@ -79,16 +79,17 @@ const DU2Login: React.FC = () => {
     setProcessing(true);
     setError('');
 
-    if (email === 'admin@admin.com' && password === 'Password@123#') {
-        try {
-            const user = await AuthService.login(email, password);
+    try {
+        const user = await AuthService.login(email, password);
+        if (user.role === UserRole.ADMIN) {
             login(user, rememberMe);
             navigate('/du2/admin');
-        } catch (err: any) {
-            setError(err.message || 'Lỗi đăng nhập Admin');
+        } else {
+            setError('Bạn không có quyền truy cập trang quản trị');
+            await AuthService.logout();
         }
-    } else {
-        setError('Thông tin Admin không chính xác');
+    } catch (err: any) {
+        setError(err.message || 'Lỗi đăng nhập Admin');
     }
     setProcessing(false);
   };
