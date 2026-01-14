@@ -2,8 +2,8 @@ import React,{ useState,useEffect,useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle } from 'lucide-react';
-import { Link,useNavigate } from 'react-router';
+import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users } from 'lucide-react';
+import { Link,useNavigate,useLocation } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
 const MoneyInput: React.FC<{
@@ -44,12 +44,22 @@ const MoneyInput: React.FC<{
 const BillSplit: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const pollIdFromQuery = queryParams.get('pollId');
+
   const [polls,setPolls] = useState<Poll[]>([]);
   const [users,setUsers] = useState<Record<string,User>>({});
 
   // Selection state
-  const [selectedPollId,setSelectedPollId] = useState<string>('');
+  const [selectedPollId,setSelectedPollId] = useState<string>(pollIdFromQuery || '');
   const selectedPoll = polls.find(p => p.id === selectedPollId);
+
+  // Public mode: Select user manually if not logged in
+  const isOnlyBill = location.pathname.includes('/only-bill');
+  const [selectedGuestUserId, setSelectedGuestUserId] = useState<string>('');
+  const [guestSearchTerm, setGuestSearchTerm] = useState<string>('');
+  const effectiveUserId = user?.id || selectedGuestUserId;
 
   // Bill State
   const [billImage,setBillImage] = useState<string>('');
@@ -129,6 +139,11 @@ const BillSplit: React.FC = () => {
   // When poll is selected, load existing bill or init new one
   useEffect(() => {
     if (selectedPoll) {
+      // Ensure taxiVoters exists to prevent undefined errors
+      if (!selectedPoll.taxiVoters) {
+        selectedPoll.taxiVoters = [];
+      }
+      
       const confirmedIds = selectedPoll.confirmedAttendances || [];
 
       if (selectedPoll.bill) {
@@ -139,24 +154,25 @@ const BillSplit: React.FC = () => {
         setRound2AmountBeer(selectedPoll.bill.round2AmountBeer || 0);
         setTotalTaxiAmount(selectedPoll.bill.totalTaxiAmount || 0);
 
-        // Merge logic: Start with saved items, but add missing confirmed users
-        const existingItems = { ...selectedPoll.bill.items };
-        let modified = false;
-
+        // Merge logic: Only keep confirmed users from saved items, and add missing confirmed users
+        const savedItems = selectedPoll.bill.items || {};
+        const filteredItems: Record<string, BillItem> = {};
+        
         confirmedIds.forEach(uid => {
-          if (!existingItems[uid]) {
-            existingItems[uid] = {
+          if (savedItems[uid]) {
+            filteredItems[uid] = savedItems[uid];
+          } else {
+            filteredItems[uid] = {
               userId: uid,
               amount: 0,
               round2Amount: 0,
               taxiAmount: 0,
               isPaid: false
             };
-            modified = true;
           }
         });
 
-        setUserItems(existingItems);
+        setUserItems(filteredItems);
       } else {
         setBillImage('');
         setBaseAmount(0);
@@ -417,14 +433,15 @@ const BillSplit: React.FC = () => {
   const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
 
   // Calculate User's specific amount for QR code
-  const currentUserItem = user && userItems[user.id];
+  const currentUserItem = effectiveUserId && userItems[effectiveUserId];
   const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount + (currentUserItem.taxiAmount || 0)) : 0;
+  const currentDisplayName = users[effectiveUserId || '']?.nickname || 'Khach';
 
   // VietQR URL - Use bank info from poll or fallback to VIB
   const bankBin = selectedPoll?.bankInfo?.bankBin || "970441";
   const bankAccount = selectedPoll?.bankInfo?.accountNumber || "006563589";
   const bankName = selectedPoll?.bankInfo?.bankName || "VIB";
-  const qrDesc = `${user?.nickname} thanh toan ${selectedPoll?.title || ''}`;
+  const qrDesc = `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(selectedPoll?.bankInfo?.accountHolder || '')}`;
 
   // Helper for deleted users
@@ -439,7 +456,64 @@ const BillSplit: React.FC = () => {
   };
 
   return (
-    <div className="pb-20">
+    <div className="pb-20 relative">
+      {/* 0. Guest Selection Overlay for Public Only-Bill */}
+      {isOnlyBill && !user && !selectedGuestUserId && selectedPoll && (
+          <div className="fixed inset-0 z-[110] bg-background/80 backdrop-blur-xl flex items-center justify-center p-4">
+              <div className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95">
+                  <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <Users size={32} className="text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white text-center mb-2">Bạn là ai?</h2>
+                  <p className="text-secondary text-center text-sm mb-6">Vui lòng chọn tên của bạn trong danh sách để xem bill cá nhân.</p>
+                  
+                  {/* Search Bar */}
+                  <div className="relative mb-4">
+                      <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
+                      <input 
+                        type="text"
+                        placeholder="Tìm tên bạn..."
+                        className="w-full bg-background border border-border rounded-2xl py-3 pl-12 pr-4 text-white outline-none focus:border-primary transition-all shadow-inner"
+                        value={guestSearchTerm}
+                        onChange={(e) => setGuestSearchTerm(e.target.value)}
+                        autoFocus
+                      />
+                  </div>
+
+                  <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                      {Object.keys(userItems)
+                        .filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase()))
+                        .map(uid => {
+                          const u = users[uid];
+                          if (!u) return null;
+                          return (
+                              <button 
+                                  key={uid}
+                                  onClick={() => setSelectedGuestUserId(uid)}
+                                  className="w-full flex items-center justify-center p-4 bg-background hover:bg-primary/10 border border-border hover:border-primary/30 rounded-2xl transition-all group"
+                              >
+                                  <span className="font-bold text-lg text-white group-hover:text-primary transition-colors">{u.nickname}</span>
+                              </button>
+                          );
+                      })}
+                      {Object.keys(userItems).filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase())).length === 0 && (
+                          <div className="p-8 text-center text-secondary italic text-sm">Không tìm thấy anh em này...</div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Re-selection button for guests */}
+      {isOnlyBill && !user && selectedGuestUserId && (
+          <button 
+            onClick={() => setSelectedGuestUserId('')}
+            className="fixed bottom-6 right-6 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-full text-xs font-bold text-secondary hover:text-white z-50 shadow-lg flex items-center gap-2"
+          >
+              <Users size={14} /> Thay đổi người xem
+          </button>
+      )}
+
       {/* Bill Image Zoom Modal */}
       {showBillZoom && billImage && (
         <div 
@@ -470,7 +544,7 @@ const BillSplit: React.FC = () => {
           </h1>
           <p className="text-secondary">Công khai, minh bạch, tình cảm bền lâu</p>
         </div>
-        <Link to="/" className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0">
+        <Link to={location.pathname.includes('/only-bill') ? "/only-bill" : "/"} className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0">
           <ArrowLeft size={16} /> Quay lại
         </Link>
       </header>
@@ -603,7 +677,7 @@ const BillSplit: React.FC = () => {
                           </div>
                         </div>
                         <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
-                          <label className="text-xs text-secondary block mb-1 flex items-center gap-1"><Car size={12} /> Tổng tiền Taxi (Sẽ chia đều cho những người có mặt trong {(selectedPoll.taxiVoters || []).length} người đăng ký)</label>
+                          <label className="text-xs text-secondary block mb-1 flex items-center gap-1"><Car size={12} /> Tổng tiền Taxi (Sẽ chia đều cho những người có mặt trong {(selectedPoll?.taxiVoters || []).length} người đăng ký)</label>
                           <div className="flex gap-2">
                             <div className="w-1/2">
                               <MoneyInput
@@ -695,10 +769,10 @@ const BillSplit: React.FC = () => {
                             <div className="p-3 bg-surface border border-border rounded-lg flex justify-between items-center">
                               <div>
                                 <div className="text-xs text-secondary">Momo</div>
-                                <div className="text-white font-bold font-mono text-lg">{selectedPoll.bankInfo.momoNumber}</div>
+                                <div className="text-white font-bold font-mono text-lg">{selectedPoll?.bankInfo?.momoNumber}</div>
                               </div>
                               <button
-                                onClick={() => { navigator.clipboard.writeText(selectedPoll.bankInfo!.momoNumber!); alert('Copied Momo') }}
+                                onClick={() => { navigator.clipboard.writeText(selectedPoll?.bankInfo?.momoNumber || ''); alert('Copied Momo') }}
                                 className="p-2 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
                               >
                                 <Copy size={16} />
@@ -840,8 +914,8 @@ const BillSplit: React.FC = () => {
                         <td className="px-4 py-3 flex items-center gap-3">
                           <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
                           <div className="flex flex-col">
-                            <span className={`font-bold ${item.userId === user?.id ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
-                              {displayUser.nickname} {item.userId === user?.id && '(Bạn)'}
+                            <span className={`font-bold ${item.userId === effectiveUserId ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
+                              {displayUser.nickname} {item.userId === effectiveUserId && `(Bạn${isOnlyBill && !user ? ' - Click để chọn lại' : ''})`}
                             </span>
                             {selectedPoll?.participants?.[item.userId]?.isNonDrinker && (
                               <span className="text-[10px] text-secondary bg-white/5 border border-white/10 px-1 rounded w-fit">Không uống 🥤</span>
@@ -876,7 +950,7 @@ const BillSplit: React.FC = () => {
                             value={item.taxiAmount || 0}
                             onChange={val => handleItemChange(item.userId,'taxiAmount',val)}
                             disabled={!isAdmin}
-                            placeholder={selectedPoll.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
+                            placeholder={selectedPoll?.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
                           />
                         </td>
                         <td className="px-4 py-3 text-right font-black text-primary text-xl whitespace-nowrap">

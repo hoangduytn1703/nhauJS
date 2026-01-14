@@ -8,6 +8,7 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const { user, logout } = useAuth();
   const location = useLocation();
   const isDU2 = location.pathname.startsWith('/du2');
+  const isOnlyBill = location.pathname.startsWith('/only-bill');
   const pathPrefix = isDU2 ? '/du2' : '';
 
   const isActive = (path: string) => {
@@ -25,21 +26,25 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     <div className="min-h-screen flex flex-col bg-background text-white">
       {/* Navbar - Sticky Top - */}
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border px-4 lg:px-8 h-16 flex items-center justify-between shadow-sm">
-        <Link to={getLink('/')} className="flex items-center gap-2 md:gap-3">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0 transition-transform hover:scale-110">
-            {isDU2 ? <Users size={20} className="md:w-6 md:h-6" /> : <Beer size={20} className="md:w-6 md:h-6" />}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg md:text-xl font-black tracking-tighter text-white leading-none">
-                {isDU2 ? 'DU2' : 'Nhậu JS'}
-            </span>
-            <span className="text-[10px] md:text-xs font-bold text-secondary uppercase tracking-[0.2em] mt-0.5">
-                {isDU2 ? 'We Are One' : 'Framework phê nhất'}
-            </span>
-          </div>
-        </Link>
+        {!isOnlyBill ? (
+          <Link to={getLink('/')} className="flex items-center gap-2 md:gap-3">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0 transition-transform hover:scale-110">
+              {isDU2 ? <Users size={20} className="md:w-6 md:h-6" /> : <Beer size={20} className="md:w-6 md:h-6" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg md:text-xl font-black tracking-tighter text-white leading-none">
+                  {isDU2 ? 'DU2' : 'Nhậu JS'}
+              </span>
+              <span className="text-[10px] md:text-xs font-bold text-secondary uppercase tracking-[0.2em] mt-0.5">
+                  {isDU2 ? 'We Are One' : 'Framework phê nhất'}
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <div /> // Empty space to maintain layout if needed, or just nothing
+        )}
 
-        {user && (
+        {user && !isOnlyBill && (
           <div className="flex items-center gap-4 md:gap-6">
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
@@ -77,6 +82,14 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               </div>
           </div>
         )}
+
+        {user && isOnlyBill && (
+            <div className="flex items-center gap-3">
+                <button onClick={logout} className="p-2 text-secondary hover:text-red-400 transition-colors cursor-pointer" title="Đăng xuất">
+                    <LogOut size={20} />
+                </button>
+            </div>
+        )}
       </nav>
 
       {/* Main Content */}
@@ -86,7 +99,7 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       </main>
 
       {/* Mobile Bottom Nav */}
-      {user && (
+      {user && !isOnlyBill && (
         <div className="md:hidden fixed bottom-0 left-0 w-full bg-surface/95 backdrop-blur-md border-t border-border flex justify-around p-2 pb-safe z-40 shadow-[0_-5px_10px_rgba(0,0,0,0.1)]">
           <Link to={getLink('/')} className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive(getLink('/')) ? 'text-primary bg-primary/10' : 'text-secondary'}`}>
             <Home size={22} />
