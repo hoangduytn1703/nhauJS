@@ -27,12 +27,26 @@ import {
 } from 'firebase/firestore';
 
 // Platform detection
-const isDU2 = () => window.location.pathname.includes('/du2');
-const isOnlyBill = () => window.location.pathname.includes('/only-bill');
+const isDU2 = () => {
+    const path = window.location.pathname;
+    return path === '/du2' || path.startsWith('/du2/');
+};
+const isOnlyBill = () => {
+    const path = window.location.pathname;
+    return path === '/only-bill' || path.startsWith('/only-bill/');
+};
+
 const getColl = (name: string) => {
-  if (isOnlyBill()) return `ob_${name}`;
-  if (isDU2()) return `du2_${name}`;
-  return name;
+  const isOB = isOnlyBill();
+  const isD2 = isDU2();
+  
+  let prefix = "";
+  if (isOB) prefix = "ob_";
+  else if (isD2) prefix = "du2_";
+  
+  const finalColl = `${prefix}${name}`;
+  // console.log(`[Firestore] Accessing collection: ${finalColl} (Path: ${window.location.pathname})`);
+  return finalColl;
 };
 
 export const AuthService = {
@@ -154,6 +168,10 @@ export const AuthService = {
           }
           throw new Error("Đổi mật khẩu thất bại. Mật khẩu quá yếu hoặc lỗi hệ thống.");
       }
+  },
+
+  logout: async (): Promise<void> => {
+      await signOut(auth);
   }
 };
 
