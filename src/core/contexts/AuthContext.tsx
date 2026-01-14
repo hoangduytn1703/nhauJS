@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { User } from '@/core/types/types';
-import { DataService } from '@/core/services/mockService';
+import { DataService, AuthService } from '@/core/services/mockService';
 
 interface AuthContextType {
   user: User | null;
@@ -30,7 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      console.error("Firebase logout failed", e);
+    }
     setUser(null);
     localStorage.removeItem(storageKey);
     sessionStorage.removeItem(storageKey);
