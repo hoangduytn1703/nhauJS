@@ -111,6 +111,12 @@ export const AuthService = {
 
   register: async (email: string, name: string, password: string): Promise<User> => {
     try {
+      // Check if registration is enabled
+      const settings = await SettingsService.getSettings();
+      if (!settings.registrationEnabled) {
+          throw new Error("Hiện tại hệ thống đang tạm đóng cổng đăng ký thành viên mới.");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
@@ -177,15 +183,31 @@ export const AuthService = {
 
 export const SettingsService = {
   getSettings: async (): Promise<{ registrationEnabled: boolean }> => {
-    // Only for Team Nhậu (ignore isDU2 logic here or force it to use main collection)
-    const docSnap = await getDoc(doc(db, "settings", "registration"));
-    if (docSnap.exists()) {
-      return docSnap.data() as { registrationEnabled: boolean };
+    try {
+      console.log("[SettingsService] Fetching registration settings...");
+      const docSnap = await getDoc(doc(db, "settings", "registration"));
+      console.log("[SettingsService] Document exists:", docSnap.exists());
+      if (docSnap.exists()) {
+        const data = docSnap.data() as { registrationEnabled: boolean };
+        console.log("[SettingsService] Document data:", data);
+        return data;
+      } else {
+        console.warn("[SettingsService] Document does not exist, returning default TRUE");
+      }
+    } catch (e) {
+      console.error("[SettingsService] Failed to fetch registration settings (Check Firebase Rules):", e);
     }
     return { registrationEnabled: true }; // Default
   },
   updateSettings: async (data: { registrationEnabled: boolean }): Promise<void> => {
-    await setDoc(doc(db, "settings", "registration"), data, { merge: true });
+    console.log("[SettingsService] Updating settings to:", data);
+    try {
+      await setDoc(doc(db, "settings", "registration"), data, { merge: true });
+      console.log("[SettingsService] Settings updated successfully");
+    } catch (e) {
+      console.error("[SettingsService] Failed to update settings:", e);
+      throw e;
+    }
   }
 };
 
