@@ -76,7 +76,7 @@ export const AuthService = {
         }
         // Sync verification status to Firestore if Auth is verified but Firestore isn't
         if (auUser.emailVerified && !userDataFromDb.isEmailVerified) {
-            await updateDoc(doc(db, "users", uid), { isEmailVerified: true });
+            await updateDoc(doc(db, getColl("users"), uid), { isEmailVerified: true });
             userDataFromDb.isEmailVerified = true;
         }
         return userDataFromDb;
@@ -178,6 +178,43 @@ export const AuthService = {
 
   logout: async (): Promise<void> => {
       await signOut(auth);
+  },
+
+  // TEMPORARY: Create DU2 Admin manually
+  createDU2Admin: async (email: string, password: string): Promise<User> => {
+    try {
+      console.log("[Admin Creation] Creating DU2 admin account...");
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      const newUser: User = {
+        id: uid,
+        email,
+        name: "DU2 Admin",
+        nickname: "Admin",
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${uid}`,
+        role: UserRole.ADMIN,
+        quote: 'DU2 System Administrator',
+        favoriteDrinks: [],
+        isBanned: false,
+        isEmailVerified: true,
+        flakeCount: 0,
+        flakedPolls: [],
+        attendanceOffset: 0,
+        voteOffset: 0
+      };
+
+      await setDoc(doc(db, "du2_users", uid), newUser);
+      await signOut(auth); // Sign out after creation
+      console.log("[Admin Creation] DU2 admin created successfully!");
+      return newUser;
+    } catch (error: any) {
+      console.error("[Admin Creation] Failed:", error);
+      if (error.code === 'auth/email-already-in-use') {
+         throw new Error("Email đã được sử dụng!");
+      }
+      throw new Error(error.message || "Tạo admin thất bại");
+    }
   }
 };
 
@@ -679,6 +716,9 @@ export const DataService = {
       { id: "rsrogikk5fyy5yw5znix78nhya", email: "tuanpha@runsystem.net", nickname: "🅿. Hà Anh Tuấn", first_name: "Phạm", last_name: "Hà Anh Tuấn" }
     ];
 
+    // Define admin emails
+    const adminEmails = ['duynh@runsystem.net', 'anhndb@runsystem.net'];
+
     for (const raw of rawUsers) {
       const u: User = {
         id: raw.id,
@@ -686,7 +726,7 @@ export const DataService = {
         name: `${raw.first_name} ${raw.last_name}`.trim(),
         nickname: raw.nickname,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${raw.id}`,
-        role: UserRole.MEMBER,
+        role: adminEmails.includes(raw.email) ? UserRole.ADMIN : UserRole.MEMBER,
         quote: 'We Are One',
         favoriteDrinks: [],
         isBanned: false,

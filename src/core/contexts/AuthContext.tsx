@@ -17,9 +17,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const isDU2 = () => window.location.pathname.startsWith('/du2');
-  const storageKey = isDU2() ? 'du2_user' : 'nhau_user';
+  const getStorageKey = () => isDU2() ? 'du2_user' : 'nhau_user';
 
   const login = (userData: User, remember: boolean) => {
+    const storageKey = getStorageKey();
     setUser(userData);
     if (remember) {
       localStorage.setItem(storageKey, JSON.stringify(userData));
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    const storageKey = getStorageKey();
     try {
       await AuthService.logout();
     } catch (e) {
@@ -42,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = (data: Partial<User>) => {
+    const storageKey = getStorageKey();
     if (data && (data as any).preventDefault !== undefined) {
       console.warn("Attempted to pass an Event object to updateUser. Ignoring.");
       return;
@@ -60,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
+      const storageKey = getStorageKey();
       try {
         const stored = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey);
 
