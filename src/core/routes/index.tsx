@@ -10,6 +10,8 @@ import Admin from '@/pages/admin';
 import Leaderboard from '@/pages/leaderboard';
 import BillSplit from '@/pages/bill-split';
 import Members from '@/pages/members';
+import OnlyBillView from '@/pages/only-bill';
+import OnlyBillAdmin from '@/pages/only-bill-admin';
 
 export const router = createBrowserRouter([
   {
@@ -57,6 +59,21 @@ export const router = createBrowserRouter([
             ],
           },
         ],
+      },
+
+      // --- ONLY BILL ROUTES ---
+      {
+        path: '/only-bill',
+        children: [
+            { index: true, element: <OnlyBillView /> },
+            { path: 'bills', element: <BillSplit /> },
+        ]
+      },
+      {
+          element: <ProtectedRoute />,
+          children: [
+              { path: '/only-bill-admin', element: <OnlyBillAdmin /> },
+          ]
       },
 
       // Catch all

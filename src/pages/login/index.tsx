@@ -1,5 +1,5 @@
 import React,{ useState } from 'react';
-import { useNavigate,Link } from 'react-router';
+import { useNavigate,Link,useLocation } from 'react-router';
 import { AuthService, SettingsService } from '@/core/services/mockService';
 import { useAuth } from '@/core/hooks';
 import { Beer,Mail,Lock,Eye,EyeOff,CheckSquare,Square,XCircle } from 'lucide-react';
@@ -20,6 +20,8 @@ const Login: React.FC = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || '/';
 
   React.useEffect(() => {
     SettingsService.getSettings().then(s => setRegEnabled(s.registrationEnabled));
@@ -32,7 +34,7 @@ const Login: React.FC = () => {
     try {
       const user = await AuthService.login(email,password);
       login(user,rememberMe);
-      navigate('/');
+      navigate(from);
     } catch (err: any) {
       setError(err.message);
     } finally {

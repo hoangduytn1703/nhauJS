@@ -27,8 +27,13 @@ import {
 } from 'firebase/firestore';
 
 // Platform detection
-const isDU2 = () => window.location.pathname.startsWith('/du2');
-const getColl = (name: string) => isDU2() ? `du2_${name}` : name;
+const isDU2 = () => window.location.pathname.includes('/du2');
+const isOnlyBill = () => window.location.pathname.includes('/only-bill');
+const getColl = (name: string) => {
+  if (isOnlyBill()) return `ob_${name}`;
+  if (isDU2()) return `du2_${name}`;
+  return name;
+};
 
 export const AuthService = {
   login: async (email: string, password: string): Promise<User> => {
@@ -41,9 +46,9 @@ export const AuthService = {
       const userDoc = await getDoc(doc(db, getColl("users"), uid));
       const userDataFromDb = userDoc.exists() ? userDoc.data() as User : null;
 
-      // Logic: Allow login if verified in Auth OR verified in Firestore OR it's the special DU2 Admin
-      const isDU2Admin = email === 'admin@admin.com';
-      const isVerified = auUser.emailVerified || userDataFromDb?.isEmailVerified === true || isDU2Admin;
+      // Logic: Allow login if verified in Auth OR verified in Firestore OR it's the special System Admin
+      const isSystemAdmin = email === 'admin@admin.com';
+      const isVerified = auUser.emailVerified || userDataFromDb?.isEmailVerified === true || isSystemAdmin;
 
       if (!isVerified) {
         await signOut(auth);
@@ -66,11 +71,11 @@ export const AuthService = {
         const newUser: User = {
             id: uid,
             email: auUser.email || "",
-            name: auUser.displayName || (isDU2Admin ? "Sếp Tổng DU2" : "User"),
-            nickname: auUser.displayName || (isDU2Admin ? "Admin DU2" : "User"),
-            avatar: isDU2Admin ? "https://api.dicebear.com/7.x/bottts/svg?seed=admin" : `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
-            role: isDU2Admin ? UserRole.ADMIN : UserRole.MEMBER,
-            quote: isDU2Admin ? "We Are One - No One Left Behind" : 'Chưa say chưa về',
+            name: auUser.displayName || (isSystemAdmin ? (isOnlyBill() ? "Admin Only Bill" : "Sếp Tổng") : "User"),
+            nickname: auUser.displayName || (isSystemAdmin ? (isOnlyBill() ? "Admin OB" : "Admin") : "User"),
+            avatar: isSystemAdmin ? "https://api.dicebear.com/7.x/bottts/svg?seed=admin" : `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+            role: isSystemAdmin ? UserRole.ADMIN : UserRole.MEMBER,
+            quote: isSystemAdmin ? "Only Bill - Privacy & Precision" : 'Chưa say chưa về',
             favoriteDrinks: [],
             isBanned: false,
             isEmailVerified: true,
@@ -246,12 +251,16 @@ export const DataService = {
     await deleteDoc(doc(db, getColl("polls"), pollId));
   },
 
-  finalizePoll: async (pollId: string, timeId: string | null, optionId: string | null): Promise<void> => {
+  finalizePoll: async (pollId: string, timeId: string | null, optionId: string | null, confirmedAttendances?: string[]): Promise<void> => {
       const pollRef = doc(db, getColl("polls"), pollId);
-      await updateDoc(pollRef, {
+      const updateData: any = {
           finalizedTimeId: timeId,
-          finalizedOptionId: optionId
-      });
+          finalizedOptionId: optionId,
+      };
+      if (confirmedAttendances) {
+          updateData.confirmedAttendances = confirmedAttendances;
+      }
+      await updateDoc(pollRef, updateData);
   },
   
   addPollOption: async (pollId: string, type: 'options' | 'timeOptions', data: { text: string, description?: string, notes?: string, image?: string }, userId: string): Promise<void> => {
@@ -648,6 +657,16 @@ export const DataService = {
         voteOffset: 0
       };
       await setDoc(doc(db, "du2_users", u.id), u);
+    }
+  },
+  seedOnlyBillUsers: async (): Promise<void> => {
+    // Get all users from du2_users
+    const snap = await getDocs(query(collection(db, "du2_users")));
+    const du2Users = snap.docs.map(doc => doc.data() as User);
+    
+    // Copy each to ob_users
+    for (const u of du2Users) {
+      await setDoc(doc(db, "ob_users", u.id), u);
     }
   }
 };
