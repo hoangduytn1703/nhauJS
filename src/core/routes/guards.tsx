@@ -21,7 +21,7 @@ export const ProtectedRoute: React.FC = () => {
 
   // Strict Isolation for Only Bill Admin
   if (user.email === 'admin@admin.com' && !isOnlyBill) {
-      return <Navigate to="/only-bill-admin" replace />;
+      return <Navigate to="/only-bill/admin" replace />;
   }
 
   return <Outlet />;
@@ -35,7 +35,7 @@ export const PublicRoute: React.FC = () => {
 
   if (user) {
     if (user.email === 'admin@admin.com') {
-        return <Navigate to="/only-bill-admin" replace />;
+        return <Navigate to="/only-bill/admin" replace />;
     }
     return <Navigate to={isDU2 ? "/du2" : "/"} replace />;
   }
