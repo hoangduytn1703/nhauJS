@@ -912,7 +912,13 @@ const BillSplit: React.FC = () => {
                     return (
                       <tr key={item.userId} className={item.userId === user?.id ? 'bg-primary/5' : ''}>
                         <td className="px-4 py-3 flex items-center gap-3">
-                          <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
+                          {!isOnlyBill ? (
+                            <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
+                          ) : (
+                            <div className={`w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary font-black shrink-0 ${isGhost ? 'grayscale opacity-50' : ''}`}>
+                                {displayUser.nickname.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <div className="flex flex-col">
                             <span className={`font-bold ${item.userId === effectiveUserId ? 'text-primary' : (isGhost ? 'text-secondary line-through' : 'text-white')}`}>
                               {displayUser.nickname} {item.userId === effectiveUserId && `(Bạn${isOnlyBill && !user ? ' - Click để chọn lại' : ''})`}

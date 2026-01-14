@@ -18,7 +18,10 @@ import {
   Save, 
   ArrowLeft,
   Car,
-  RefreshCw
+  RefreshCw,
+  ArrowUpDown,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { QRGenerator } from '@/components/QRGenerator';
 import { Link } from 'react-router';
@@ -159,19 +162,62 @@ const OnlyBillAdmin: React.FC = () => {
   };
 
   const seedUsers = async () => {
-      if (window.confirm("Copy tất cả user từ DU2 sang Only Bill?")) {
-          setLoading(true);
-          try {
-              await DataService.seedOnlyBillUsers();
-              alert("Thành công!");
-              refreshData();
-          } catch(e) {
-              alert("Lỗi!");
-          } finally {
-              setLoading(false);
-          }
-      }
-  }
+    if (window.confirm("Copy tất cả user từ DU2 sang Only Bill?")) {
+        setLoading(true);
+        try {
+            await DataService.seedOnlyBillUsers();
+            alert("Thành công!");
+            refreshData();
+        } catch(e) {
+            alert("Lỗi!");
+        } finally {
+            setLoading(false);
+        }
+    }
+}
+
+
+
+const handleColumnSelectAll = (field: 'joined' | 'nonDrinker' | 'taxi') => {
+    const visibleUsers = users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
+    const allSelected = visibleUsers.every(u => attendanceMap[u.id]?.[field]);
+    const newState = !allSelected;
+
+    setAttendanceMap(prev => {
+        const next = { ...prev };
+        visibleUsers.forEach(u => {
+            if (field === 'joined') {
+                next[u.id] = { ...next[u.id], [field]: newState };
+                if (!newState) {
+                    next[u.id].nonDrinker = false;
+                    next[u.id].taxi = false;
+                }
+            } else {
+                // nonDrinker or taxi can only be set if joined
+                if (next[u.id]?.joined) {
+                    next[u.id] = { ...next[u.id], [field]: newState };
+                }
+            }
+        });
+        return next;
+    });
+};
+
+const handleUserToggleAll = (userId: string) => {
+    const current = attendanceMap[userId];
+    const isAllOn = current?.joined && current?.nonDrinker && current?.taxi;
+    
+    setAttendanceMap(prev => ({
+        ...prev,
+        [userId]: {
+            joined: !isAllOn,
+            nonDrinker: !isAllOn,
+            taxi: !isAllOn
+        }
+    }));
+};
+
+
 
   if (!isAdmin) return <div className="p-10 text-center text-secondary">Bạn không có quyền truy cập trang này</div>;
 
@@ -322,20 +368,46 @@ const OnlyBillAdmin: React.FC = () => {
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
-                                <thead className="bg-background text-secondary text-[10px] uppercase font-bold tracking-wider">
-                                    <tr>
-                                        <th className="px-6 py-4">Thành viên</th>
-                                        <th className="px-6 py-4 text-center">CÓ ĐI NHẬU?</th>
-                                        <th className="px-6 py-4 text-center">KHÔNG UỐNG?</th>
-                                        <th className="px-6 py-4 text-center">ĐI TAXI CHUNG?</th>
+                                <thead>
+                                    <tr className="bg-background text-secondary text-[10px] uppercase font-bold tracking-wider">
+                                        <th className="px-6 py-4">
+                                            Thành viên
+                                        </th>
+                                        <th className="px-6 py-4 text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                CÓ ĐI NHẬU?
+                                                <button onClick={() => handleColumnSelectAll('joined')} className="text-primary hover:text-primary-hover transition-colors flex items-center gap-1 normal-case font-bold">
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => attendanceMap[u.id]?.joined) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                </button>
+                                            </div>
+                                        </th>
+                                        <th className="px-6 py-4 text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                KHÔNG UỐNG?
+                                                <button onClick={() => handleColumnSelectAll('nonDrinker')} className="text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1 normal-case font-bold">
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.nonDrinker) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                </button>
+                                            </div>
+                                        </th>
+                                        <th className="px-6 py-4 text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                ĐI TAXI CHUNG?
+                                                <button onClick={() => handleColumnSelectAll('taxi')} className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 normal-case font-bold">
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.taxi) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                </button>
+                                            </div>
+                                        </th>
+                                        <th className="px-6 py-4 text-center">ALL</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border">
+                                <tbody className="divide-y divide-border">   
                                     {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).map(u => (
                                         <tr key={u.id} className={`hover:bg-white/5 transition-colors ${attendanceMap[u.id]?.joined ? 'bg-primary/5' : ''}`}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={u.avatar} className="w-10 h-10 rounded-full border border-surface" />
+                                                    <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary font-black">
+                                                        {u.nickname.charAt(0).toUpperCase()}
+                                                    </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-white">{u.nickname}</span>
                                                         <span className="text-[10px] text-secondary">{u.name}</span>
@@ -344,10 +416,18 @@ const OnlyBillAdmin: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button 
-                                                    onClick={() => setAttendanceMap(prev => ({ 
-                                                        ...prev, 
-                                                        [u.id]: { ...prev[u.id], joined: !prev[u.id].joined } 
-                                                    }))}
+                                                    onClick={() => setAttendanceMap(prev => {
+                                                        const isJoined = !prev[u.id]?.joined;
+                                                        return { 
+                                                            ...prev, 
+                                                            [u.id]: { 
+                                                                ...prev[u.id], 
+                                                                joined: isJoined,
+                                                                nonDrinker: isJoined ? prev[u.id]?.nonDrinker : false,
+                                                                taxi: isJoined ? prev[u.id]?.taxi : false
+                                                            } 
+                                                        };
+                                                    })}
                                                     className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto transition-all border cursor-pointer ${
                                                         attendanceMap[u.id]?.joined 
                                                         ? 'bg-primary border-primary text-background' 
@@ -390,6 +470,18 @@ const OnlyBillAdmin: React.FC = () => {
                                                     } ${!attendanceMap[u.id]?.joined ? 'opacity-20 cursor-not-allowed grayscale' : ''}`}
                                                 >
                                                     {attendanceMap[u.id]?.taxi ? <Car size={24} /> : <div className="w-10 h-1" />}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button 
+                                                    onClick={() => handleUserToggleAll(u.id)}
+                                                    className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto transition-all border cursor-pointer ${
+                                                        attendanceMap[u.id]?.joined && attendanceMap[u.id]?.nonDrinker && attendanceMap[u.id]?.taxi
+                                                        ? 'bg-white text-black border-white'
+                                                        : 'bg-transparent border-white/20 text-white/40 hover:text-white hover:border-white/50'
+                                                    }`}
+                                                >
+                                                    <CheckSquare size={20} />
                                                 </button>
                                             </td>
                                         </tr>
