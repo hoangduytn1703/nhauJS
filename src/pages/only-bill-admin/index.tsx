@@ -179,7 +179,10 @@ const OnlyBillAdmin: React.FC = () => {
 
 
 const handleColumnSelectAll = (field: 'joined' | 'nonDrinker' | 'taxi') => {
-    const visibleUsers = users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
+    const visibleUsers = users.filter(u => 
+        u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     const allSelected = visibleUsers.every(u => attendanceMap[u.id]?.[field]);
     const newState = !allSelected;
 
@@ -377,7 +380,7 @@ const handleUserToggleAll = (userId: string) => {
                                             <div className="flex flex-col items-center gap-2">
                                                 CÓ ĐI NHẬU?
                                                 <button onClick={() => handleColumnSelectAll('joined')} className="text-primary hover:text-primary-hover transition-colors flex items-center gap-1 normal-case font-bold">
-                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => attendanceMap[u.id]?.joined) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).every(u => attendanceMap[u.id]?.joined) ? <CheckSquare size={14} /> : <Square size={14} />} All
                                                 </button>
                                             </div>
                                         </th>
@@ -385,7 +388,7 @@ const handleUserToggleAll = (userId: string) => {
                                             <div className="flex flex-col items-center gap-2">
                                                 KHÔNG UỐNG?
                                                 <button onClick={() => handleColumnSelectAll('nonDrinker')} className="text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1 normal-case font-bold">
-                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.nonDrinker) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.nonDrinker) ? <CheckSquare size={14} /> : <Square size={14} />} All
                                                 </button>
                                             </div>
                                         </th>
@@ -393,7 +396,7 @@ const handleUserToggleAll = (userId: string) => {
                                             <div className="flex flex-col items-center gap-2">
                                                 ĐI TAXI CHUNG?
                                                 <button onClick={() => handleColumnSelectAll('taxi')} className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 normal-case font-bold">
-                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.taxi) ? <CheckSquare size={14} /> : <Square size={14} />} All
+                                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).every(u => !attendanceMap[u.id]?.joined || attendanceMap[u.id]?.taxi) ? <CheckSquare size={14} /> : <Square size={14} />} All
                                                 </button>
                                             </div>
                                         </th>
@@ -401,7 +404,7 @@ const handleUserToggleAll = (userId: string) => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">   
-                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase())).map(u => (
+                                    {users.filter(u => u.nickname.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).map(u => (
                                         <tr key={u.id} className={`hover:bg-white/5 transition-colors ${attendanceMap[u.id]?.joined ? 'bg-primary/5' : ''}`}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
@@ -410,7 +413,7 @@ const handleUserToggleAll = (userId: string) => {
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-white">{u.nickname}</span>
-                                                        <span className="text-[10px] text-secondary">{u.name}</span>
+                                                        <span className="text-[10px] text-secondary">{u.email}</span>
                                                     </div>
                                                 </div>
                                             </td>

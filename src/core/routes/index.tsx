@@ -67,13 +67,13 @@ export const router = createBrowserRouter([
         children: [
             { index: true, element: <OnlyBillView /> },
             { path: 'bills', element: <BillSplit /> },
+            { 
+                element: <ProtectedRoute />,
+                children: [
+                    { path: 'admin', element: <OnlyBillAdmin /> },
+                ]
+            },
         ]
-      },
-      {
-          element: <ProtectedRoute />,
-          children: [
-              { path: '/only-bill-admin', element: <OnlyBillAdmin /> },
-          ]
       },
 
       // Catch all

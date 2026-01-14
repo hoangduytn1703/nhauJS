@@ -33,7 +33,7 @@ const isDU2 = () => {
 };
 const isOnlyBill = () => {
     const path = window.location.pathname;
-    return path === '/only-bill' || path.startsWith('/only-bill/');
+    return path.startsWith('/only-bill'); 
 };
 
 const getColl = (name: string) => {

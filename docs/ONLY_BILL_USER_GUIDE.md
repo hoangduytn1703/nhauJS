@@ -6,7 +6,7 @@ Tài liệu này hướng dẫn cách sử dụng và các kịch bản kiểm t
 
 ## 1. Tổng Quan
 Module Only Bill được thiết kế để tách biệt hoàn toàn dữ liệu và giao diện với hệ thống Nhậu JS chính.
-- **Đường dẫn Admin**: `/only-bill-admin`
+- **Đường dẫn Admin**: `/only-bill/admin`
 - **Đường dẫn User**: `/only-bill`
 - **Đặc điểm**: Không hiển thị Avatar người dùng (để tăng tính riêng tư), giao diện rút gọn, luồng công việc tập trung vào việc tính tiền nhanh.
 
