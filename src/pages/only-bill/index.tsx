@@ -88,19 +88,16 @@ const OnlyBillView: React.FC = () => {
                                         <span className="w-1 h-1 rounded-full bg-secondary opacity-30"></span>
                                         <span className="text-xs font-bold text-primary">{(poll.bill?.totalAmount || 0).toLocaleString()} đ</span>
                                     </div>
-                                    <div className="mt-3 flex -space-x-2">
+                                    <div className="mt-2 flex flex-wrap gap-1">
                                         {(poll.confirmedAttendances || []).slice(0, 5).map(uid => (
-                                            <img 
-                                                key={uid} 
-                                                src={users[uid]?.avatar || `https://ui-avatars.com/api/?name=${uid}`} 
-                                                className="w-8 h-8 rounded-full border-2 border-surface" 
-                                                title={users[uid]?.nickname}
-                                            />
+                                            <span key={uid} className="text-[10px] bg-white/5 text-secondary px-1.5 py-0.5 rounded border border-border">
+                                                {users[uid]?.nickname}
+                                            </span>
                                         ))}
                                         {(poll.confirmedAttendances || []).length > 5 && (
-                                            <div className="w-8 h-8 rounded-full border-2 border-surface bg-background flex items-center justify-center text-[10px] font-bold text-secondary">
+                                            <span className="text-[10px] text-secondary opacity-50">
                                                 +{(poll.confirmedAttendances || []).length - 5}
-                                            </div>
+                                            </span>
                                         )}
                                     </div>
                                 </div>
