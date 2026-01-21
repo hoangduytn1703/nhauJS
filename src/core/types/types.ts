@@ -108,6 +108,7 @@ export interface Poll {
   // Addition Permission (New)
   allowMemberAddPlaces?: boolean;
   allowMemberAddTimes?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface DrinkStats {

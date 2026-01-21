@@ -21,10 +21,12 @@ import {
   RefreshCw,
   ArrowUpDown,
   CheckSquare,
-  Square
+  Square,
+  Trash2,
+  Beer
 } from 'lucide-react';
 import { QRGenerator } from '@/components/QRGenerator';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 const OnlyBillAdmin: React.FC = () => {
   const { user } = useAuth();
@@ -46,6 +48,7 @@ const OnlyBillAdmin: React.FC = () => {
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { joined: boolean, nonDrinker: boolean, taxi: boolean }>>({});
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
@@ -59,15 +62,39 @@ const OnlyBillAdmin: React.FC = () => {
         DataService.getUsers(),
         DataService.getPolls()
       ]);
-      setUsers(uData);
+      // Filter out admins from user list
+      const nonAdminUsers = uData.filter(u => u.role !== UserRole.ADMIN);
+      setUsers(nonAdminUsers);
       setPolls(pData);
       
       // Initialize attendance map for Step 2
       const initialMap: Record<string, { joined: boolean, nonDrinker: boolean, taxi: boolean }> = {};
-      uData.forEach(u => {
+      nonAdminUsers.forEach(u => {
         initialMap[u.id] = { joined: false, nonDrinker: false, taxi: false };
       });
       setAttendanceMap(initialMap);
+
+      // --- URL Sync Logic ---
+      const urlPollId = searchParams.get('pollId');
+      const urlStep = searchParams.get('step');
+      if (urlPollId) {
+          const poll = pData.find(p => p.id === urlPollId);
+          if (poll) {
+              setSelectedPoll(poll);
+              if (urlStep === 'SELECT_MEMBERS') {
+                  setBillStep('SELECT_MEMBERS');
+                  // Update the map for this specific poll
+                  const newMap = { ...initialMap };
+                  nonAdminUsers.forEach(u => {
+                    const isAttended = poll.confirmedAttendances?.includes(u.id) || false;
+                    const isNonDrinker = poll.participants?.[u.id]?.isNonDrinker || false;
+                    const isTaxi = poll.taxiVoters?.includes(u.id) || false;
+                    newMap[u.id] = { joined: isAttended, nonDrinker: isNonDrinker, taxi: isTaxi };
+                  });
+                  setAttendanceMap(newMap);
+              }
+          }
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -161,6 +188,22 @@ const OnlyBillAdmin: React.FC = () => {
     }
   };
 
+  const handleDeletePoll = async (e: React.MouseEvent, pollId: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Bạn có chắc chắn muốn xóa kèo này?")) return;
+    
+    setLoading(true);
+    try {
+        await DataService.softDeletePoll(pollId);
+        await refreshData();
+        alert("Đã xóa kèo thành công!");
+    } catch (e) {
+        alert("Lỗi khi xóa kèo");
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const seedUsers = async () => {
     if (window.confirm("Copy tất cả user từ DU2 sang Only Bill?")) {
         setLoading(true);
@@ -231,7 +274,7 @@ const handleUserToggleAll = (userId: string) => {
           <h1 className="text-3xl font-black text-white flex items-center gap-2">
             <Calculator className="text-primary" /> Only Bill Admin
           </h1>
-          <p className="text-secondary text-sm italic">Hệ thống quyết toán dành riêng cho DU2 - Isolated Data</p>
+          <p className="text-secondary text-sm italic">Hệ thống quyết toán dành riêng cho DU2</p>
         </div>
       </header>
 
@@ -320,12 +363,12 @@ const handleUserToggleAll = (userId: string) => {
                             </div>
                         ) : (
                             polls.map(poll => (
-                                <button 
+                                <div 
                                     key={poll.id}
                                     onClick={() => handleStartSelection(poll)}
-                                    className="text-left bg-surface border border-border p-6 rounded-3xl hover:border-primary transition-all group flex justify-between items-center cursor-pointer shadow-lg"
+                                    className="relative text-left bg-surface border border-border p-6 rounded-3xl hover:border-primary transition-all group flex justify-between items-center cursor-pointer shadow-lg"
                                 >
-                                    <div>
+                                    <div className="flex-1">
                                         <h3 className="font-bold text-white group-hover:text-primary transition-colors">{poll.title}</h3>
                                         <p className="text-xs text-secondary mt-1">{poll.description || '(Không có mô tả)'}</p>
                                         <div className="flex gap-2 mt-3">
@@ -337,8 +380,17 @@ const handleUserToggleAll = (userId: string) => {
                                             <span className="text-[10px] bg-white/5 text-secondary px-2 py-0.5 rounded">{poll.confirmedAttendances?.length || 0} người</span>
                                         </div>
                                     </div>
-                                    <ArrowRight size={20} className="text-secondary group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                </button>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={(e) => handleDeletePoll(e, poll.id)}
+                                            className="p-3 text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+                                            title="Xóa kèo"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                        <ArrowRight size={20} className="text-secondary group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                    </div>
+                                </div>
                             ))
                         )}
                     </div>
@@ -351,8 +403,8 @@ const handleUserToggleAll = (userId: string) => {
                         <ArrowLeft size={16} /> Quay lại chọn kèo
                     </button>
                     
-                    <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-2xl">
-                        <div className="p-6 border-b border-border bg-background/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="bg-surface border border-border rounded-3xl shadow-2xl relative">
+                        <div className="p-6 border-b border-border bg-background/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-t-3xl">
                             <div>
                                 <h2 className="text-2xl font-black text-white">{selectedPoll.title}</h2>
                                 <p className="text-secondary text-sm italic">Bước 2: Chọn thành viên đi nhậu & trạng thái uống</p>
@@ -366,6 +418,31 @@ const handleUserToggleAll = (userId: string) => {
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Stats Bar */}
+                        <div className="px-6 py-4 bg-background/30 border-b border-border flex flex-wrap gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface/50 rounded-xl border border-border shadow-sm">
+                                <Users size={14} className="text-secondary" />
+                                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Thành viên:</span>
+                                <span className="text-sm font-black text-white">
+                                    {Object.values(attendanceMap).filter(v => v.joined).length}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface/50 rounded-xl border border-border shadow-sm">
+                                <Beer size={14} className="text-primary" />
+                                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Nhậu (uống bia):</span>
+                                <span className="text-sm font-black text-white">
+                                    {Object.values(attendanceMap).filter(v => v.joined && !v.nonDrinker).length}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface/50 rounded-xl border border-border shadow-sm">
+                                <Car size={14} className="text-blue-400" />
+                                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Đi Taxi:</span>
+                                <span className="text-sm font-black text-white">
+                                    {Object.values(attendanceMap).filter(v => v.joined && v.taxi).length}
+                                </span>
                             </div>
                         </div>
 
@@ -493,7 +570,7 @@ const handleUserToggleAll = (userId: string) => {
                             </table>
                         </div>
 
-                        <div className="p-8 bg-background/50 border-t border-border flex justify-between items-center">
+                        <div className="sticky bottom-0 z-50 p-6 md:p-8 bg-surface backdrop-blur-md border-t border-border flex justify-between items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)] rounded-b-3xl">
                             <div className="text-secondary text-sm">
                                 <span className="font-bold text-white text-lg">{Object.values(attendanceMap).filter(v => v.joined).length}</span> người đã chọn
                             </div>
@@ -526,7 +603,7 @@ const handleUserToggleAll = (userId: string) => {
                          <div className="w-20 h-20 bg-green-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
                             <CheckCircle2 size={40} className="text-green-500" />
                          </div>
-                         <h2 className="text-2xl font-black text-white mb-2">Đã lưu danh sách tham gia</h2>
+                         <h2 className="text-2xl font-black text-white mb-2">Đã lưu danh sách tham gia cho "{selectedPoll.title}"</h2>
                          <p className="text-secondary mb-8">Hệ thống đã cập nhật những người đi nhậu. Bạn có thể sang trang tính tiền chính thức để nhập hóa đơn.</p>
                          <Link 
                             to={`/only-bill/bills?pollId=${selectedPoll.id}`}
