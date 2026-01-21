@@ -59,12 +59,14 @@ const OnlyBillAdmin: React.FC = () => {
         DataService.getUsers(),
         DataService.getPolls()
       ]);
-      setUsers(uData);
+      // Filter out admins from user list
+      const nonAdminUsers = uData.filter(u => u.role !== UserRole.ADMIN);
+      setUsers(nonAdminUsers);
       setPolls(pData);
       
       // Initialize attendance map for Step 2
       const initialMap: Record<string, { joined: boolean, nonDrinker: boolean, taxi: boolean }> = {};
-      uData.forEach(u => {
+      nonAdminUsers.forEach(u => {
         initialMap[u.id] = { joined: false, nonDrinker: false, taxi: false };
       });
       setAttendanceMap(initialMap);

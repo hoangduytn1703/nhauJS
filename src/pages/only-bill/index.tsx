@@ -1,6 +1,6 @@
 import React,{ useState,useEffect } from 'react';
 import { DataService } from '@/core/services/mockService';
-import { Poll,User } from '@/core/types/types';
+import { Poll,User,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
 import { Receipt, Search, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
@@ -27,8 +27,11 @@ const OnlyBillView: React.FC = () => {
             ]);
             setPolls(pData.filter(p => !!p.bill)); // Only show polls with bills
             
+            // Filter out admins from user list
+            const nonAdminUsers = uData.filter(u => u.role !== UserRole.ADMIN);
+            
             const userMap: Record<string,User> = {};
-            uData.forEach(u => userMap[u.id] = u);
+            nonAdminUsers.forEach(u => userMap[u.id] = u);
             setUsers(userMap);
         } catch (e) {
             console.error(e);
