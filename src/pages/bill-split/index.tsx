@@ -2,8 +2,8 @@ import React,{ useState,useEffect,useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users } from 'lucide-react';
-import { Link,useNavigate,useLocation } from 'react-router';
+import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users,Beer } from 'lucide-react';
+import { Link,useNavigate,useLocation,useSearchParams } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
 const MoneyInput: React.FC<{
@@ -44,15 +44,10 @@ const MoneyInput: React.FC<{
 const BillSplit: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const pollIdFromQuery = queryParams.get('pollId');
-
   const [polls,setPolls] = useState<Poll[]>([]);
   const [users,setUsers] = useState<Record<string,User>>({});
-
-  // Selection state
-  const [selectedPollId,setSelectedPollId] = useState<string>(pollIdFromQuery || '');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedPollId = searchParams.get('pollId') || '';
   const selectedPoll = polls.find(p => p.id === selectedPollId);
 
   // Public mode: Select user manually if not logged in
@@ -109,6 +104,22 @@ const BillSplit: React.FC = () => {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelectPollId = (id: string) => {
+    if (isDirty) {
+      if (!window.confirm("Bạn có thay đổi chưa lưu. Bạn có muốn chuyển kèo khác không?")) {
+        return;
+      }
+    }
+    setIsDirty(false);
+    setHasAppliedBase(false);
+    setHasAppliedRound2(false);
+    if (id) {
+        setSearchParams({ pollId: id });
+    } else {
+        setSearchParams({});
+    }
+  };
 
   const isAdmin = user?.role === UserRole.ADMIN;
 
@@ -422,6 +433,7 @@ const BillSplit: React.FC = () => {
       });
       setIsDirty(false);
       alert('Lưu bill thành công!');
+      refreshData();
     } catch (e) {
       alert('Lỗi khi lưu');
     } finally {
@@ -539,13 +551,27 @@ const BillSplit: React.FC = () => {
 
       <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end">
         <div>
-          <h1 className="text-3xl font-black text-white flex items-center gap-2">
-            <Receipt className="text-primary" /> Tính Tiền & Chia Bill
+          <h1 className="text-3xl font-black text-white flex items-center flex-wrap gap-x-3 gap-y-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="text-primary" /> Tính Tiền & Chia Bill
+            </div>
+            {selectedPoll && (
+              <span className="text-[32px] text-primary bg-primary/10 px-4 py-1 rounded-2xl border border-primary/30 shadow-[0_0_25px_rgba(244,140,37,0.15)] animate-in zoom-in-95 duration-500">
+                {selectedPoll.title}
+              </span>
+            )}
           </h1>
-          <p className="text-secondary">Công khai, minh bạch, tình cảm bền lâu</p>
+          <p className="text-secondary mt-1">Công khai, minh bạch, tình cảm bền lâu</p>
         </div>
-        <Link to={location.pathname.includes('/only-bill') ? "/only-bill" : "/"} className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0">
-          <ArrowLeft size={16} /> Quay lại
+        <Link 
+          to={
+            (isOnlyBill && isAdmin && selectedPollId) 
+              ? `/only-bill/admin?pollId=${selectedPollId}&step=SELECT_MEMBERS` 
+              : (location.pathname.includes('/only-bill') ? "/only-bill" : "/")
+          } 
+          className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0"
+        >
+          <ArrowLeft size={16} /> Quay lại chọn danh sách tham gia
         </Link>
       </header>
 
@@ -556,7 +582,7 @@ const BillSplit: React.FC = () => {
             {polls.map(p => (
               <button
                 key={p.id}
-                onClick={() => setSelectedPollId(p.id)}
+                onClick={() => handleSelectPollId(p.id)}
                 className="text-left bg-background border border-border p-4 rounded-xl hover:border-primary transition-colors flex justify-between items-center group cursor-pointer"
               >
                 <div>
@@ -581,7 +607,7 @@ const BillSplit: React.FC = () => {
       ) : (
         <div className="flex flex-col gap-6 animate-in slide-in-from-right-4">
           <div className="flex justify-between items-center">
-            <button onClick={() => setSelectedPollId('')} className="text-secondary text-sm hover:underline cursor-pointer">← Chọn kèo khác</button>
+            <button onClick={() => handleSelectPollId('')} className="text-secondary text-sm hover:underline cursor-pointer">← Chọn kèo khác</button>
             {!isAdmin && (
               <span className="text-xs text-secondary bg-surface px-3 py-1 rounded-full border border-border flex items-center gap-1">
                 <Lock size={12} /> Chế độ xem (Chỉ Admin được sửa)
@@ -806,6 +832,32 @@ const BillSplit: React.FC = () => {
             />
           </div>
 
+          {/* Stats Bar */}
+          {selectedPoll && (
+            <div className="flex flex-wrap gap-3 md:gap-4 px-1">
+              <div className="flex items-center gap-2 bg-surface/50 border border-border px-3 py-1.5 rounded-xl shadow-sm">
+                <Users size={14} className="text-secondary" />
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Thành viên:</span>
+                <span className="text-sm font-black text-white">{Object.keys(userItems).length}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-surface/50 border border-border px-3 py-1.5 rounded-xl shadow-sm">
+                 {/* Importing Beer icon if not available, oh wait, I check imports */}
+                <Beer size={14} className="text-primary" />
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Có nhậu:</span>
+                <span className="text-sm font-black text-white">
+                  {Object.keys(userItems).filter(uid => !selectedPoll.participants?.[uid]?.isNonDrinker).length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-surface/50 border border-border px-3 py-1.5 rounded-xl shadow-sm">
+                <Car size={14} className="text-blue-400" />
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Đi Taxi:</span>
+                <span className="text-sm font-black text-white">
+                  {(selectedPoll.taxiVoters || []).filter(uid => !!userItems[uid]).length}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* 2. List Users */}
           <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-xl">
             <table className="w-full text-left text-sm text-secondary">
@@ -1022,7 +1074,7 @@ const BillSplit: React.FC = () => {
                                     ${saving || !isDirty ? 'bg-secondary/20 text-secondary cursor-not-allowed opacity-50' : 'bg-primary hover:bg-primary-hover text-background cursor-pointer'}
                                 `}
               >
-                <Save size={24} /> {saving ? 'Đang lưu...' : 'Lưu Bill & Cập nhật BXH'}
+                <Save size={24} /> {saving ? 'Đang lưu...' : 'Lưu Bill'}
               </button>
             </div>
           )}
