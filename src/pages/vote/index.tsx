@@ -107,6 +107,15 @@ const Vote: React.FC = () => {
   // Party Status Modal State
   const [statusModal,setStatusModal] = useState<{ show: boolean,pollId: string }>({ show: false,pollId: '' });
 
+  // Vote loading state: stores the optionId currently being voted on
+  const [votingId,setVotingId] = useState<string | null>(null);
+
+  // Drink toggle loading state
+  const [togglingDrink,setTogglingDrink] = useState(false);
+
+  // Taxi toggle loading state
+  const [togglingTaxi,setTogglingTaxi] = useState(false);
+
   // View Poll Result Modal State
   const [viewResultPoll,setViewResultPoll] = useState<Poll | null>(null);
 
@@ -156,9 +165,10 @@ const Vote: React.FC = () => {
 
   const handleVote = async (pollId: string,optionId: string,target: 'options' | 'timeOptions') => {
     if (!user) return;
-    if (isAdmin) return alert("Admin chỉ được xem, không tham gia vote!");
+    if (isAdmin) return alert("Admin chi duoc xem, khong tham gia vote!");
+    if (votingId) return; // Prevent spam while another vote is in progress
 
-    // Check constraint: Must vote time before location (Keep this for logical flow unless asked otherwise)
+    // Check constraint: Must vote time before location
     const poll = polls.find(p => p.id === pollId);
     if (poll && target === 'options' && poll.timeOptions && poll.timeOptions.length > 0) {
       const hasVotedTime = poll.timeOptions.some(t => t.votes.includes(user.id));
@@ -169,39 +179,50 @@ const Vote: React.FC = () => {
       }
     }
 
+    setVotingId(optionId);
     try {
       await DataService.vote(pollId,optionId,user.id,target);
-      // Optimistic update
+      // Refresh polls after vote
       const updatedPolls = await DataService.getPolls();
       setPolls(updatedPolls.filter(p => !p.isHidden));
     } catch (error: any) {
-      alert(error.message || 'Lỗi khi vote');
+      alert(error.message || 'Loi khi vote');
+    } finally {
+      setVotingId(null);
     }
   };
 
   const handleTaxiVote = async (pollId: string) => {
     if (!user) return;
+    if (togglingTaxi) return;
     const poll = polls.find(p => p.id === pollId);
-    if (poll && isPollEnded(poll)) return; // Không cho vote khi đã chốt
-    
+    if (poll && isPollEnded(poll)) return;
+
+    setTogglingTaxi(true);
     try {
       await DataService.toggleTaxiVote(pollId,user.id);
       fetchData();
     } catch (e: any) {
-      alert(e.message || "Lỗi khi đăng ký taxi");
+      alert(e.message || "Loi khi dang ky taxi");
+    } finally {
+      setTogglingTaxi(false);
     }
   };
 
   const handleNoDrinkVote = async (pollId: string) => {
     if (!user) return;
+    if (togglingDrink) return;
     const poll = polls.find(p => p.id === pollId);
     if (poll && isPollEnded(poll)) return;
-    
+
+    setTogglingDrink(true);
     try {
       await DataService.toggleNonDrinker(pollId,user.id);
       fetchData();
     } catch (e: any) {
-      alert(e.message || "Lỗi thao tác");
+      alert(e.message || "Loi thao tac");
+    } finally {
+      setTogglingDrink(false);
     }
   };
 
@@ -472,9 +493,13 @@ const Vote: React.FC = () => {
               <div className="flex justify-center mb-2">
                 <button
                   onClick={() => setStatusModal({ show: true,pollId: poll.id })}
-                  className="flex items-center gap-2 border border-border hover:border-primary/60 bg-surface/60 hover:bg-surface text-secondary hover:text-primary px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer"
+                  className="btn-party-status flex items-center gap-2 px-8 py-3 font-bold text-base cursor-pointer z-10"
                 >
-                  <Users size={15} /> Xem tình hình đi nhậu
+                  <span className="border-top"></span>
+                  <span className="border-right"></span>
+                  <span className="border-bottom"></span>
+                  <span className="border-left"></span>
+                  <Users size={15} className="relative z-10" /> <span className="relative z-10">Xem tình hình đi nhậu</span>
                 </button>
               </div>
             )}
@@ -482,7 +507,7 @@ const Vote: React.FC = () => {
             {/* --- Logic 1: Chưa chọn trạng thái tham gia & KHÔNG PHẢI ADMIN --- */}
             {!participationStatus && !ended && !isAdmin && (
               <div className="bg-surface/50 border border-border p-6 rounded-2xl flex flex-col items-center justify-center gap-4 py-12">
-                <h4 className="text-xl font-bold text-white">Bạn có tham gia kèo này không?</h4>
+                <h4 className="text-xl font-bold text-white">Bạn sẽ quẩy cùng chúng tui chứ?</h4>
                 <p className="text-secondary text-sm -mt-2">Xác nhận trước khi chọn quán nhé!</p>
 
                 {showDeclineInputFor === poll.id ? (
@@ -598,7 +623,7 @@ const Vote: React.FC = () => {
                       <Calendar className="text-primary" size={20} /> Chốt ngày chiến
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {poll.timeOptions.map(timeOpt => {
+                      {poll.timeOptions.slice().sort((a,b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(timeOpt => {
                         const isVoted = timeOpt.votes.includes(user?.id || '');
                         const voteCount = timeOpt.votes.length;
                         const dateInfo = formatDate(timeOpt.text);
@@ -607,23 +632,36 @@ const Vote: React.FC = () => {
                         const isWinner = ended && (poll.finalizedTimeId === timeOpt.id || (!poll.finalizedTimeId && winningTimeOptions.some(w => w.id === timeOpt.id)));
                         const isDimmed = ended && !isWinner;
 
+                        const isVotingThis = votingId === timeOpt.id;
+                        const isAnyVoting = !!votingId;
                         return (
                           <div
                             key={timeOpt.id}
-                            onClick={() => !ended && !isAdmin && handleVote(poll.id,timeOpt.id,'timeOptions')}
+                            onClick={() => !ended && !isAdmin && !isAnyVoting && handleVote(poll.id,timeOpt.id,'timeOptions')}
                             className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1 
                                                     ${isWinner ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105 z-10' : ''}
                                                     ${isDimmed ? 'opacity-40 grayscale border-border' : ''}
                                                     ${!ended && isVoted ? 'bg-primary/20 border-primary' : ''}
-                                                    ${!ended && !isVoted ? `bg-surface border-border ${isAdmin ? '' : 'hover:border-secondary cursor-pointer hover:border-primary'}` : ''}
-                                                    ${!ended && !isAdmin ? 'cursor-pointer' : ''}
+                                                    ${!ended && !isVoted ? `bg-surface border-border ${isAdmin || isAnyVoting ? '' : 'hover:border-secondary cursor-pointer hover:border-primary'}` : ''}
+                                                    ${!ended && !isAdmin && !isAnyVoting ? 'cursor-pointer' : (isAnyVoting ? 'cursor-wait' : '')}
                                                 `}
                           >
+                            {/* Loading overlay for time option */}
+                            {isVotingThis && (
+                              <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-20 rounded-xl">
+                                <div className="flex gap-1">
+                                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Winner Badge */}
                             {isWinner && (
                               <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
                                 {poll.finalizedTimeId === timeOpt.id ? <CheckCircle size={10} className="inline mr-1" /> : <Star size={10} className="inline mr-1" />}
-                                {poll.finalizedTimeId === timeOpt.id ? 'CHỐT' : 'TOP'}
+                                {poll.finalizedTimeId === timeOpt.id ? 'CHOT' : 'TOP'}
                               </div>
                             )}
 
@@ -708,7 +746,7 @@ const Vote: React.FC = () => {
                     )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {poll.options.map(option => {
+                    {poll.options.slice().sort((a,b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(option => {
                       const totalVotes = poll.options.reduce((acc,curr) => acc + curr.votes.length,0);
                       const percent = totalVotes === 0 ? 0 : Math.round((option.votes.length / totalVotes) * 100);
                       const isVoted = option.votes.includes(user?.id || '');
@@ -812,13 +850,26 @@ const Vote: React.FC = () => {
 
                               <button
                                 onClick={() => handleVote(poll.id,option.id,'options')}
-                                disabled={ended || participationStatus !== 'JOIN' || isAdmin}
+                                disabled={ended || participationStatus !== 'JOIN' || isAdmin || !!votingId}
                                 className={`w-full py-3 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${isVoted
                                   ? 'bg-primary text-background hover:bg-primary-hover'
                                   : 'bg-background text-white border border-border hover:border-primary hover:text-primary'
-                                  } ${ended || isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                                  } ${
+                                    (ended || isAdmin) ? 'cursor-not-allowed opacity-50'
+                                    : votingId === option.id ? 'cursor-wait'
+                                    : 'cursor-pointer'
+                                  }`}
                               >
-                                {isAdmin ? 'Admin View' : (isVoted ? <><ThumbsUp size={18} /> Đã chọn</> : (ended ? 'Đã hết giờ' : 'Vote ngay'))}
+                                {votingId === option.id ? (
+                                  <span className="flex items-center gap-2">
+                                    <span className="flex gap-1">
+                                      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                    </span>
+                                    Đang vote...
+                                  </span>
+                                ) : isAdmin ? 'Admin View' : (isVoted ? <><ThumbsUp size={18} /> Đã chọn</> : (ended ? 'Đã hết giờ' : 'Dứt thôi'))}
                               </button>
                             </div>
                           </div>
@@ -853,20 +904,28 @@ const Vote: React.FC = () => {
                         <p className="text-sm text-secondary mt-1">
                           {participant?.isNonDrinker 
                             ? "Bạn đã chọn KHÔNG UỐNG. Hệ thống sẽ chỉ chia tiền mồi (đồ ăn)." 
-                            : "Uống tới bến! Bạn sẽ cùng chia tiền bia/rượu."}
+                            : "Uống tới bến! Bạn sẽ cùng chia tiền bia với anh em."}
                         </p>
                       </div>
                       
                       <div className="flex items-center gap-4 bg-background/50 p-2 pr-4 rounded-full border border-border">
                         <button
                           onClick={() => handleNoDrinkVote(poll.id)}
-                          disabled={isAdmin || ended}
-                          className={`relative flex items-center w-14 h-8 rounded-full transition-all p-1 ${participant?.isNonDrinker ? 'bg-secondary' : 'bg-primary'} ${isAdmin || ended ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                          disabled={isAdmin || ended || togglingDrink}
+                          className={`relative flex items-center w-14 h-8 rounded-full transition-all p-1 ${participant?.isNonDrinker ? 'bg-secondary' : 'bg-primary'} ${isAdmin || ended ? 'cursor-not-allowed' : (togglingDrink ? 'cursor-wait opacity-70' : 'cursor-pointer')}`}
                         >
-                          <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all ${participant?.isNonDrinker ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                          {togglingDrink ? (
+                            <div className="absolute inset-0 flex items-center justify-center gap-0.5">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </div>
+                          ) : (
+                            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all ${participant?.isNonDrinker ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                          )}
                         </button>
-                        <span className={`font-bold text-sm ${participant?.isNonDrinker ? 'text-secondary' : 'text-primary'}`}>
-                          {participant?.isNonDrinker ? 'KHÔNG UỐNG' : 'CÓ UỐNG'}
+                        <span className={`font-bold text-sm min-w-[7rem] text-center ${togglingDrink ? 'text-secondary animate-pulse' : (participant?.isNonDrinker ? 'text-secondary' : 'text-primary')}`}>
+                          {togglingDrink ? 'Đang đổi ý...' : (participant?.isNonDrinker ? 'KHÔNG UỐNG' : 'CÓ UỐNG')}
                         </span>
                       </div>
                     </div>
@@ -900,17 +959,28 @@ const Vote: React.FC = () => {
                         <p className="text-xs text-secondary mb-3">Điều kiện: Phải hoàn thành bình chọn Thời gian (nếu có).</p>
                         <button
                           onClick={() => handleTaxiVote(poll.id)}
-                          disabled={isAdmin || ended}
+                          disabled={isAdmin || ended || togglingTaxi}
                           className={`w-full py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 ${
                             (poll.taxiVoters || []).includes(user?.id || '')
                               ? 'bg-primary text-background hover:bg-primary-hover shadow-[0_0_20px_rgba(244,140,37,0.3)]'
                               : 'bg-surface border border-border text-white hover:border-primary hover:text-primary'
-                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : (togglingTaxi ? 'cursor-wait opacity-70' : 'cursor-pointer')}`}
                         >
-                          {(poll.taxiVoters || []).includes(user?.id || '') ? (
-                            <><CarFront size={20} /> {(ended) ? 'ĐÃ ĐĂNG KÝ TAXI' : 'ĐÃ ĐĂNG KÝ TAXI (Bấm để hủy)'}</>
+                          {togglingTaxi ? (
+                            <span className="flex items-center gap-2">
+                              <span className="flex gap-1">
+                                <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                              </span>
+                              Dang xu ly...
+                            </span>
                           ) : (
-                            <><CarFront size={20} /> {ended ? 'KHÔNG ĐĂNG KÝ' : 'TÔI SẼ ĐI TAXI'}</>
+                            (poll.taxiVoters || []).includes(user?.id || '') ? (
+                              <><CarFront size={20} /> {ended ? 'DA DANG KY TAXI' : 'DA DANG KY TAXI (BAM DE HUY)'}</>
+                            ) : (
+                              <><CarFront size={20} /> {ended ? 'KHONG DANG KY' : 'TOI SE DI TAXI'}</>
+                            )
                           )}
                         </button>
                       </div>
