@@ -277,10 +277,12 @@ export const DataService = {
     const q = query(pollsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id
-    } as Poll));
+    return snapshot.docs
+      .map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      } as Poll))
+      .filter(p => !p.isDeleted);
   },
 
   createPoll: async (pollData: Omit<Poll, 'id' | 'createdAt' | 'options' | 'timeOptions'>, options: {text: string, description: string, notes?: string, image?: string}[], timeOptions: string[]): Promise<Poll> => {
@@ -326,6 +328,11 @@ export const DataService = {
 
   deletePoll: async (pollId: string): Promise<void> => {
     await deleteDoc(doc(db, getColl("polls"), pollId));
+  },
+
+  softDeletePoll: async (pollId: string): Promise<void> => {
+    const pollRef = doc(db, getColl("polls"), pollId);
+    await updateDoc(pollRef, { isDeleted: true });
   },
 
   finalizePoll: async (pollId: string, timeId: string | null, optionId: string | null, confirmedAttendances?: string[]): Promise<void> => {

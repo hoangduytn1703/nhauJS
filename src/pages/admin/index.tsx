@@ -309,7 +309,7 @@ const Admin: React.FC = () => {
     if (!isAdmin) return;
     if (confirmDeleteId === pollId) {
       try {
-        await DataService.deletePoll(pollId);
+        await DataService.softDeletePoll(pollId);
         refreshData();
         setConfirmDeleteId(null);
       } catch (e) {
