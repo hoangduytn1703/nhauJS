@@ -35,8 +35,8 @@ export const BaseLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <span className="text-lg md:text-xl font-black tracking-tighter text-white leading-none">
                   {isDU2 ? 'DU2' : 'Nhậu JS'}
               </span>
-              <span className="text-[10px] md:text-xs font-bold text-secondary uppercase tracking-[0.2em] mt-0.5">
-                  {isDU2 ? 'We Are One' : 'Framework phê nhất'}
+              <span className="text-[10px] md:text-xs font-bold text-secondary uppercase tracking-[0.2em] mt-1">
+                  {isDU2 ? 'We Are One' : 'Framework phê nhất thế giới'}
               </span>
             </div>
           </Link>
