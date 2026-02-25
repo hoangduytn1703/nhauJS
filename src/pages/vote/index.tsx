@@ -1,6 +1,6 @@
 import React,{ useEffect,useState } from 'react';
 import { DataService } from '@/core/services/mockService';
-import { Poll,User,PollOption } from '@/core/types/types';
+import { Poll,User,PollOption,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
 import { Clock,TrendingUp,ThumbsUp,Beer,MapPin,CheckSquare,AlertCircle,XCircle,CheckCircle,RefreshCcw,Calendar,ArrowUp,Star,Award,ExternalLink,Plus,Users,User as UserIcon,StickyNote,ShieldAlert,Car,CarFront } from 'lucide-react';
 import { Link } from 'react-router';
@@ -103,6 +103,9 @@ const Vote: React.FC = () => {
 
   // View Voters Modal State
   const [viewVotersModal,setViewVotersModal] = useState<{ show: boolean,title: string,voterIds: string[] }>({ show: false,title: '',voterIds: [] });
+
+  // Party Status Modal State
+  const [statusModal,setStatusModal] = useState<{ show: boolean,pollId: string }>({ show: false,pollId: '' });
 
   // View Poll Result Modal State
   const [viewResultPoll,setViewResultPoll] = useState<Poll | null>(null);
@@ -464,6 +467,18 @@ const Vote: React.FC = () => {
               )}
             </div>
 
+            {/* --- Status Button: visible to all logged-in users --- */}
+            {user && (
+              <div className="flex justify-center mb-2">
+                <button
+                  onClick={() => setStatusModal({ show: true,pollId: poll.id })}
+                  className="flex items-center gap-2 border border-border hover:border-primary/60 bg-surface/60 hover:bg-surface text-secondary hover:text-primary px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer"
+                >
+                  <Users size={15} /> Xem tình hình đi nhậu
+                </button>
+              </div>
+            )}
+
             {/* --- Logic 1: Chưa chọn trạng thái tham gia & KHÔNG PHẢI ADMIN --- */}
             {!participationStatus && !ended && !isAdmin && (
               <div className="bg-surface/50 border border-border p-6 rounded-2xl flex flex-col items-center justify-center gap-4 py-12">
@@ -546,7 +561,7 @@ const Vote: React.FC = () => {
             {/* --- Logic 3: Đã chọn THAM GIA hoặc đã kết thúc HOẶC là ADMIN --- */}
             {(participationStatus === 'JOIN' || isAdmin || (ended && participationStatus !== 'DECLINE')) && (
               <div className="space-y-8 animate-in fade-in">
-                {/* Cancel Join Button (Only for joined users when not ended, NOT for admin) */}
+                {/* Cancel Join Button + Status Button Row */}
                 {participationStatus === 'JOIN' && !ended && !isAdmin && (
                   <div className="flex justify-center flex-col items-center gap-2">
                     {confirmDeclineId === poll.id ? (
@@ -1062,7 +1077,7 @@ const Vote: React.FC = () => {
         </div>
       )}
 
-      {/* --- VIEW VOTERS MODAL --- */}
+      {/* --- VIEW VOTERS MODAL (Simple) --- */}
       {viewVotersModal.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })}>
           <div className="bg-surface border border-border rounded-2xl w-full max-w-sm p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -1071,15 +1086,11 @@ const Vote: React.FC = () => {
                 <h3 className="text-lg font-bold text-white">Danh sách vote</h3>
                 <p className="text-sm text-primary font-bold">{viewVotersModal.title}</p>
               </div>
-              <button
-                onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })}
-                className="text-secondary hover:text-white cursor-pointer"
-              >
+              <button onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })} className="text-secondary hover:text-white cursor-pointer">
                 <XCircle size={24} />
               </button>
             </div>
-
-            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
+            <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2">
               {viewVotersModal.voterIds.length === 0 ? (
                 <p className="text-center text-secondary py-4">Chưa có ai vote</p>
               ) : (
@@ -1087,26 +1098,234 @@ const Vote: React.FC = () => {
                   const voter = getVoterInfo(uid);
                   return (
                     <div key={uid} className="flex items-center gap-3 bg-background/50 p-2 rounded-lg">
-                      <img
-                        src={voter.avatar}
-                        className="w-10 h-10 rounded-full border border-border object-cover"
-                      />
+                      <img src={voter.avatar} className="w-10 h-10 rounded-full border border-border object-cover" />
                       <div>
                         <div className="text-sm font-bold text-white">{voter.nickname}</div>
                         <div className="text-xs text-secondary">{voter.name}</div>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
             </div>
-
             <div className="mt-4 text-center text-xs text-secondary border-t border-border pt-2">
               Tổng cộng: {viewVotersModal.voterIds.length} người
             </div>
           </div>
         </div>
       )}
+
+      {/* --- PARTY STATUS MODAL --- */}
+      {statusModal.show && (() => {
+        const currentPoll = polls.find(p => p.id === statusModal.pollId);
+        if (!currentPoll) return null;
+        const participants = currentPoll.participants || {};
+
+        // All member IDs who have responded (JOIN or DECLINE)
+        const joinedIds = Object.entries(participants)
+          .filter(([,p]) => p.status === 'JOIN')
+          .map(([uid]) => uid);
+
+        const declinedIds = Object.entries(participants)
+          .filter(([,p]) => p.status === 'DECLINE')
+          .map(([uid]) => uid);
+
+        // For each joined member: find which venue(s) they voted for
+        const getVotedVenues = (uid: string) =>
+          currentPoll.options.filter(o => o.votes.includes(uid)).map(o => o.text);
+
+        const getVotedTime = (uid: string) =>
+          (currentPoll.timeOptions || []).filter(t => t.votes.includes(uid)).map(t => t.text);
+
+        const renderJoinedRow = (uid: string) => {
+          const voter = getVoterInfo(uid);
+          const pData = participants[uid];
+          const isNonDrinker = pData?.isNonDrinker;
+          const votedVenues = getVotedVenues(uid);
+          const hasVotedVenue = votedVenues.length > 0;
+          const hasVotedTime = getVotedTime(uid).length > 0 || (currentPoll.timeOptions || []).length === 0;
+          const fullyVoted = hasVotedVenue && hasVotedTime;
+
+          return (
+            <div key={uid} className="flex items-start gap-3 bg-background/50 p-3 rounded-xl">
+              <img src={voter.avatar} className="w-9 h-9 rounded-full border border-border object-cover shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-white">{voter.nickname}</span>
+                  {voter.name && voter.name !== voter.nickname && (
+                    <span className="text-xs text-secondary">({voter.name})</span>
+                  )}
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+                    isNonDrinker
+                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                      : 'bg-primary/10 text-primary border-primary/30'
+                  }`}>
+                    {isNonDrinker ? '🥤 No beer' : '🍺 Có uống'}
+                  </span>
+                </div>
+                {hasVotedVenue ? (
+                  <div className="text-xs text-secondary mt-1">
+                    <span className="text-green-400 font-bold">✓</span> {votedVenues.join(', ')}
+                  </div>
+                ) : (
+                  <div className="text-xs text-yellow-500/80 mt-1 font-medium">Chưa chọn quán</div>
+                )}
+              </div>
+              <div className="shrink-0">
+                {fullyVoted ? (
+                  <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <CheckCircle size={14} className="text-green-400" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                    <Clock size={14} className="text-yellow-500" />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        };
+
+        // Sort: fully voted first, then those missing venue/time
+        const sortedJoined = [...joinedIds].sort((a,b) => {
+          const aFull = getVotedVenues(a).length > 0;
+          const bFull = getVotedVenues(b).length > 0;
+          if (aFull && !bFull) return -1;
+          if (!aFull && bFull) return 1;
+          return 0;
+        });
+
+        // Users who have NOT responded at all (not in participants)
+        const respondedIds = new Set([...joinedIds,...declinedIds]);
+        const pendingIds = users
+          .filter(u => u.role !== UserRole.ADMIN && !respondedIds.has(u.id))
+          .map(u => u.id);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setStatusModal({ show: false,pollId: '' })}>
+            <div className="bg-surface border border-border rounded-2xl w-full max-w-[460px] shadow-2xl flex flex-col max-h-[88vh]" onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
+              <div className="flex justify-between items-start p-5 pb-4 border-b border-border shrink-0">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users size={18} className="text-primary" />
+                    Tình hình đi nhậu
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5 truncate max-w-[280px]">{currentPoll.title}</p>
+                </div>
+                <button onClick={() => setStatusModal({ show: false,pollId: '' })} className="text-secondary hover:text-white cursor-pointer shrink-0 ml-2">
+                  <XCircle size={22} />
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="overflow-y-auto flex-1 p-4 space-y-5">
+
+                {/* Section 1: Joined members */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <CheckCircle size={10} className="text-green-400" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-wider text-green-400">Tham gia</span>
+                    <span className="text-xs text-secondary bg-background px-2 py-0.5 rounded-full font-bold">{joinedIds.length}</span>
+                  </div>
+                  {joinedIds.length === 0 ? (
+                    <p className="text-xs text-secondary italic pl-7">Chưa có ai xác nhận tham gia</p>
+                  ) : (
+                    <div className="space-y-2">{sortedJoined.map(uid => renderJoinedRow(uid))}</div>
+                  )}
+                </div>
+
+                {/* Section 2: Not responded yet */}
+                {pendingIds.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center">
+                        <Clock size={10} className="text-secondary" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-wider text-secondary">Chưa phản hồi</span>
+                      <span className="text-xs text-secondary bg-background px-2 py-0.5 rounded-full font-bold">{pendingIds.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {pendingIds.map(uid => {
+                        const voter = getVoterInfo(uid);
+                        return (
+                          <div key={uid} className="flex items-center gap-3 bg-background/30 p-2.5 rounded-xl border border-border/30 opacity-70">
+                            <img src={voter.avatar} className="w-9 h-9 rounded-full border border-border object-cover shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-bold text-white truncate">{voter.nickname}</div>
+                              <div className="text-xs text-secondary">Chưa xác nhận</div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-secondary/10 text-secondary border-secondary/30 shrink-0">?</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 3: Declined */}
+                {declinedIds.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <XCircle size={10} className="text-red-400" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-wider text-red-400">Không tham gia</span>
+                      <span className="text-xs text-secondary bg-background px-2 py-0.5 rounded-full font-bold">{declinedIds.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {declinedIds.map(uid => {
+                        const voter = getVoterInfo(uid);
+                        const p = participants[uid];
+                        return (
+                          <div key={uid} className="flex items-center gap-3 bg-background/50 p-2.5 rounded-xl opacity-60">
+                            <img src={voter.avatar} className="w-9 h-9 rounded-full border border-border object-cover shrink-0 grayscale" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-bold text-white truncate">{voter.nickname}</div>
+                              {p?.reason && <div className="text-xs text-secondary truncate italic">"{p.reason}"</div>}
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-500/10 text-red-400 border-red-500/30 shrink-0">Bận</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 pt-3 border-t border-border shrink-0">
+                <div className="flex justify-around text-center">
+                  <div>
+                    <div className="text-lg font-black text-green-400">{joinedIds.length}</div>
+                    <div className="text-[10px] text-secondary uppercase tracking-wide">Tham gia</div>
+                  </div>
+                  <div className="w-px bg-border"></div>
+                  <div>
+                    <div className="text-lg font-black text-primary">{joinedIds.filter(uid => getVotedVenues(uid).length > 0).length}</div>
+                    <div className="text-[10px] text-secondary uppercase tracking-wide">Đã chọn quán</div>
+                  </div>
+                  <div className="w-px bg-border"></div>
+                  <div>
+                    <div className="text-lg font-black text-secondary">{pendingIds.length}</div>
+                    <div className="text-[10px] text-secondary uppercase tracking-wide">Chưa biết</div>
+                  </div>
+                  <div className="w-px bg-border"></div>
+                  <div>
+                    <div className="text-lg font-black text-red-400">{declinedIds.length}</div>
+                    <div className="text-[10px] text-secondary uppercase tracking-wide">Không đi</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
     </div>
   );
 };
