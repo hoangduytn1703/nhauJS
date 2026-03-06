@@ -1,5 +1,7 @@
 import React,{ useState,useEffect,useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
+import { db } from '@/core/services/firebaseConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
 import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users,Beer } from 'lucide-react';
@@ -204,6 +206,29 @@ const BillSplit: React.FC = () => {
       }
     }
   },[selectedPoll]);
+
+  // --- Real-time Auto-refresh logic ---
+  useEffect(() => {
+    if (!selectedPollId) return;
+
+    const isD2 = location.pathname.includes('/du2');
+    const isOB = location.pathname.includes('/only-bill');
+    const prefix = isOB ? 'ob_' : isD2 ? 'du2_' : '';
+    
+    // Lắng nghe sự thay đổi của Poll này trên Firestore
+    const unsub = onSnapshot(doc(db, `${prefix}polls`, selectedPollId), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.bill && data.bill.items) {
+           // Cập nhật trạng thái đóng tiền ngay lập tức lên UI
+           setUserItems(data.bill.items);
+           console.log("[Real-time] Bill updated from server!");
+        }
+      }
+    });
+
+    return () => unsub(); // Hủy lắng nghe khi chuyển trang
+  }, [selectedPollId, location.pathname]);
 
   const handleApplyBaseAmount = () => {
     if (!isAdmin || !selectedPoll) return;
@@ -486,9 +511,11 @@ const BillSplit: React.FC = () => {
   
   // NẾU CÓ paymentCode THÌ PHẢI ĐƯA VÀO NỘI DUNG CHUYỂN KHOẢN ĐỂ SEPAY NHẬN DIỆN
   const currentItem = effectiveUserId && userItems[effectiveUserId];
+  const pollTitleRaw = selectedPoll?.title || '';
+  // Format: [Mã] [Tên] [Kèo] - VD: NHAUABCD DUY KEO_LAU
   const qrDesc = currentItem?.paymentCode 
-    ? currentItem.paymentCode 
-    : `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
+    ? `${currentItem.paymentCode} ${currentDisplayName} ${pollTitleRaw}`.substring(0, 50)
+    : `${currentDisplayName} thanh toan ${pollTitleRaw}`;
     
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(accountHolder)}`;
 

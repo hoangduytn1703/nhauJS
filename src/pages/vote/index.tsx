@@ -1,13 +1,13 @@
-import React,{ useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataService } from '@/core/services/mockService';
-import { Poll,User,PollOption,UserRole } from '@/core/types/types';
+import { Poll, User, PollOption, UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Clock,TrendingUp,ThumbsUp,Beer,MapPin,CheckSquare,AlertCircle,XCircle,CheckCircle,RefreshCcw,Calendar,ArrowUp,Star,Award,ExternalLink,Plus,Users,User as UserIcon,StickyNote,ShieldAlert,Car,CarFront } from 'lucide-react';
+import { Clock, TrendingUp, ThumbsUp, Beer, MapPin, CheckSquare, AlertCircle, XCircle, CheckCircle, RefreshCcw, Calendar, ArrowUp, Star, Award, ExternalLink, Plus, Users, User as UserIcon, StickyNote, ShieldAlert, Car, CarFront } from 'lucide-react';
 import { Link } from 'react-router';
 import { PollResultModal } from '@/components/PollResultModal';
 
-const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadline,ended }) => {
-  const [timeLeft,setTimeLeft] = useState(deadline - Date.now());
+const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadline, ended }) => {
+  const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
 
   useEffect(() => {
     if (ended || timeLeft <= 0) return;
@@ -15,12 +15,12 @@ const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadli
       const next = deadline - Date.now();
       setTimeLeft(next);
       if (next <= 0) clearInterval(timer);
-    },1000);
+    }, 1000);
     return () => clearInterval(timer);
-  },[deadline,ended,timeLeft]);
+  }, [deadline, ended, timeLeft]);
 
   const deadlineDate = new Date(deadline);
-  const deadlineText = `${deadlineDate.toLocaleTimeString('vi-VN',{ hour: '2-digit',minute: '2-digit' })} ngày ${deadlineDate.toLocaleDateString('vi-VN',{ day: '2-digit',month: '2-digit' })}`;
+  const deadlineText = `${deadlineDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ngày ${deadlineDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
 
   if (ended || timeLeft <= 0) {
     return (
@@ -60,8 +60,8 @@ const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadli
         <div className="flex flex-col leading-none">
           <span className="font-mono text-xl font-black tracking-tighter tabular-nums flex items-baseline gap-0.5">
             {hours > 0 && <span>{hours}<small className="text-[10px] font-bold mx-px">h</small></span>}
-            <span>{minutes.toString().padStart(2,'0')}<small className="text-[10px] font-bold mx-px">m</small></span>
-            <span className={isUrgent ? 'text-red-400' : 'text-primary/60'}>{seconds.toString().padStart(2,'0')}<small className="text-[10px] font-bold ml-px">s</small></span>
+            <span>{minutes.toString().padStart(2, '0')}<small className="text-[10px] font-bold mx-px">m</small></span>
+            <span className={isUrgent ? 'text-red-400' : 'text-primary/60'}>{seconds.toString().padStart(2, '0')}<small className="text-[10px] font-bold ml-px">s</small></span>
           </span>
         </div>
       </div>
@@ -78,57 +78,57 @@ const CountdownBadge: React.FC<{ deadline: number; ended: boolean }> = ({ deadli
 
 const Vote: React.FC = () => {
   const { user } = useAuth();
-  const [polls,setPolls] = useState<Poll[]>([]);
-  const [loading,setLoading] = useState(true);
-  const [userMap,setUserMap] = useState<Record<string,User>>({});
-  const [users,setUsers] = useState<User[]>([]); // Array of users for Modal
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userMap, setUserMap] = useState<Record<string, User>>({});
+  const [users, setUsers] = useState<User[]>([]); // Array of users for Modal
 
   // Local state for reason input
-  const [declineReason,setDeclineReason] = useState<string>('');
-  const [showDeclineInputFor,setShowDeclineInputFor] = useState<string | null>(null);
+  const [declineReason, setDeclineReason] = useState<string>('');
+  const [showDeclineInputFor, setShowDeclineInputFor] = useState<string | null>(null);
 
   // Local state for Cancel Confirmation
-  const [confirmDeclineId,setConfirmDeclineId] = useState<string | null>(null);
+  const [confirmDeclineId, setConfirmDeclineId] = useState<string | null>(null);
 
   // Warning state
-  const [warningMsg,setWarningMsg] = useState<{ pollId: string,msg: string } | null>(null);
+  const [warningMsg, setWarningMsg] = useState<{ pollId: string, msg: string } | null>(null);
 
   // Add Option State
-  const [addModal,setAddModal] = useState<{ show: boolean,pollId: string,type: 'options' | 'timeOptions' }>({ show: false,pollId: '',type: 'options' });
-  const [newOptionText,setNewOptionText] = useState('');
-  const [newOptionDesc,setNewOptionDesc] = useState('');
-  const [newOptionNotes,setNewOptionNotes] = useState(''); // New field for notes
-  const [newOptionImage,setNewOptionImage] = useState(''); // New field for image
-  const [adding,setAdding] = useState(false);
+  const [addModal, setAddModal] = useState<{ show: boolean, pollId: string, type: 'options' | 'timeOptions' }>({ show: false, pollId: '', type: 'options' });
+  const [newOptionText, setNewOptionText] = useState('');
+  const [newOptionDesc, setNewOptionDesc] = useState('');
+  const [newOptionNotes, setNewOptionNotes] = useState(''); // New field for notes
+  const [newOptionImage, setNewOptionImage] = useState(''); // New field for image
+  const [adding, setAdding] = useState(false);
 
   // View Voters Modal State
-  const [viewVotersModal,setViewVotersModal] = useState<{ show: boolean,title: string,voterIds: string[] }>({ show: false,title: '',voterIds: [] });
+  const [viewVotersModal, setViewVotersModal] = useState<{ show: boolean, title: string, voterIds: string[] }>({ show: false, title: '', voterIds: [] });
 
   // Party Status Modal State
-  const [statusModal,setStatusModal] = useState<{ show: boolean,pollId: string }>({ show: false,pollId: '' });
+  const [statusModal, setStatusModal] = useState<{ show: boolean, pollId: string }>({ show: false, pollId: '' });
 
   // Vote loading state: stores the optionId currently being voted on
-  const [votingId,setVotingId] = useState<string | null>(null);
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   // Drink toggle loading state
-  const [togglingDrink,setTogglingDrink] = useState(false);
+  const [togglingDrink, setTogglingDrink] = useState(false);
 
   // Taxi toggle loading state
-  const [togglingTaxi,setTogglingTaxi] = useState(false);
+  const [togglingTaxi, setTogglingTaxi] = useState(false);
 
   // View Poll Result Modal State
-  const [viewResultPoll,setViewResultPoll] = useState<Poll | null>(null);
+  const [viewResultPoll, setViewResultPoll] = useState<Poll | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
 
   const fetchData = async () => {
     try {
-      const [pollsData,usersData] = await Promise.all([
+      const [pollsData, usersData] = await Promise.all([
         DataService.getPolls(),
         DataService.getUsers()
       ]);
 
-      const map: Record<string,User> = {};
+      const map: Record<string, User> = {};
       usersData.forEach(u => map[u.id] = u);
 
       setUserMap(map);
@@ -146,14 +146,14 @@ const Vote: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  },[]);
+  }, []);
 
-  const handleParticipation = async (pollId: string,status: 'JOIN' | 'DECLINE',reason: string = '') => {
+  const handleParticipation = async (pollId: string, status: 'JOIN' | 'DECLINE', reason: string = '') => {
     if (!user) return;
     if (isAdmin) return alert("Admin chỉ được xem, không tham gia vote!");
 
     try {
-      await DataService.submitParticipation(pollId,user.id,status,reason);
+      await DataService.submitParticipation(pollId, user.id, status, reason);
       setShowDeclineInputFor(null);
       setDeclineReason('');
       setConfirmDeclineId(null);
@@ -163,7 +163,7 @@ const Vote: React.FC = () => {
     }
   };
 
-  const handleVote = async (pollId: string,optionId: string,target: 'options' | 'timeOptions') => {
+  const handleVote = async (pollId: string, optionId: string, target: 'options' | 'timeOptions') => {
     if (!user) return;
     if (isAdmin) return alert("Admin chi duoc xem, khong tham gia vote!");
     if (votingId) return; // Prevent spam while another vote is in progress
@@ -173,15 +173,15 @@ const Vote: React.FC = () => {
     if (poll && target === 'options' && poll.timeOptions && poll.timeOptions.length > 0) {
       const hasVotedTime = poll.timeOptions.some(t => t.votes.includes(user.id));
       if (!hasVotedTime) {
-        setWarningMsg({ pollId,msg: '⚠️ Vui lòng chọn ngày trước khi chọn quán!' });
-        setTimeout(() => setWarningMsg(null),3000);
+        setWarningMsg({ pollId, msg: '⚠️ Vui lòng chọn ngày trước khi chọn quán!' });
+        setTimeout(() => setWarningMsg(null), 3000);
         return;
       }
     }
 
     setVotingId(optionId);
     try {
-      await DataService.vote(pollId,optionId,user.id,target);
+      await DataService.vote(pollId, optionId, user.id, target);
       // Refresh polls after vote
       const updatedPolls = await DataService.getPolls();
       setPolls(updatedPolls.filter(p => !p.isHidden));
@@ -200,7 +200,7 @@ const Vote: React.FC = () => {
 
     setTogglingTaxi(true);
     try {
-      await DataService.toggleTaxiVote(pollId,user.id);
+      await DataService.toggleTaxiVote(pollId, user.id);
       fetchData();
     } catch (e: any) {
       alert(e.message || "Loi khi dang ky taxi");
@@ -217,7 +217,7 @@ const Vote: React.FC = () => {
 
     setTogglingDrink(true);
     try {
-      await DataService.toggleNonDrinker(pollId,user.id);
+      await DataService.toggleNonDrinker(pollId, user.id);
       fetchData();
     } catch (e: any) {
       alert(e.message || "Loi thao tac");
@@ -234,9 +234,9 @@ const Vote: React.FC = () => {
   }
 
   // --- Add Option Logic ---
-  const openAddModal = (pollId: string,type: 'options' | 'timeOptions') => {
+  const openAddModal = (pollId: string, type: 'options' | 'timeOptions') => {
     if (isAdmin) return;
-    setAddModal({ show: true,pollId,type });
+    setAddModal({ show: true, pollId, type });
     setNewOptionText('');
     setNewOptionDesc('');
     setNewOptionNotes('');
@@ -250,17 +250,17 @@ const Vote: React.FC = () => {
 
     setAdding(true);
     try {
-      await DataService.addPollOption(addModal.pollId,addModal.type,{
+      await DataService.addPollOption(addModal.pollId, addModal.type, {
         text: newOptionText,
         description: newOptionDesc,
         notes: newOptionNotes,
         image: newOptionImage
-      },user.id);
+      }, user.id);
 
-      setAddModal({ ...addModal,show: false });
+      setAddModal({ ...addModal, show: false });
       fetchData();
     } catch (e: any) {
-      console.error("Submit option error:",e);
+      console.error("Submit option error:", e);
       alert("Lỗi khi thêm: " + (e.message || "Vui lòng thử lại"));
     } finally {
       setAdding(false);
@@ -268,8 +268,8 @@ const Vote: React.FC = () => {
   };
 
   // --- View Voters Logic ---
-  const openVotersModal = (title: string,voterIds: string[]) => {
-    setViewVotersModal({ show: true,title,voterIds });
+  const openVotersModal = (title: string, voterIds: string[]) => {
+    setViewVotersModal({ show: true, title, voterIds });
   };
 
   // --- Toggle Check-In Logic (for Admin in Modal) ---
@@ -293,17 +293,17 @@ const Vote: React.FC = () => {
   // Calculate Time Remaining for the first active poll
   const activePoll = polls.find(p => !isPollEnded(p) && p.status === 'OPEN');
   const deadlineDisplay = activePoll?.deadline
-    ? new Date(activePoll.deadline).toLocaleTimeString('vi-VN',{ hour: '2-digit',minute: '2-digit' })
+    ? new Date(activePoll.deadline).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '∞';
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return { day: '?',month: '?',weekday: '?' };
+    if (!dateString) return { day: '?', month: '?', weekday: '?' };
     const date = new Date(dateString);
     const day = date.getDate();
     const month = date.getMonth() + 1;
     // Get Vietnamese weekday
-    const weekday = date.toLocaleDateString('vi-VN',{ weekday: 'long' });
-    return { day,month,weekday };
+    const weekday = date.toLocaleDateString('vi-VN', { weekday: 'long' });
+    return { day, month, weekday };
   }
 
   // Helper to get winners (for expired polls)
@@ -366,7 +366,7 @@ const Vote: React.FC = () => {
             <span>🔥 Đang diễn ra</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black leading-tight tracking-tight text-white">
-            Chốt kèo lẹ lẹ
+            Chốt kèo lẹ lẹ testtt
           </h2>
         </div>
       </section>
@@ -492,7 +492,7 @@ const Vote: React.FC = () => {
             {user && (
               <div className="flex justify-center mb-2">
                 <button
-                  onClick={() => setStatusModal({ show: true,pollId: poll.id })}
+                  onClick={() => setStatusModal({ show: true, pollId: poll.id })}
                   className="btn-party-status flex items-center gap-2 px-8 py-3 font-bold text-base cursor-pointer z-10"
                 >
                   <span className="border-top"></span>
@@ -527,7 +527,7 @@ const Vote: React.FC = () => {
                         Quay lại
                       </button>
                       <button
-                        onClick={() => handleParticipation(poll.id,'DECLINE',declineReason)}
+                        onClick={() => handleParticipation(poll.id, 'DECLINE', declineReason)}
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold cursor-pointer"
                       >
                         Xác nhận nghỉ
@@ -537,7 +537,7 @@ const Vote: React.FC = () => {
                 ) : (
                   <div className="flex gap-4">
                     <button
-                      onClick={() => handleParticipation(poll.id,'JOIN')}
+                      onClick={() => handleParticipation(poll.id, 'JOIN')}
                       className="px-8 py-3 bg-primary text-background font-black rounded-xl hover:bg-primary-hover shadow-lg hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
                     >
                       <CheckCircle size={20} /> Gét Gô (Tham gia)
@@ -574,7 +574,7 @@ const Vote: React.FC = () => {
                 )}
                 {!ended && (
                   <button
-                    onClick={() => handleParticipation(poll.id,'JOIN')}
+                    onClick={() => handleParticipation(poll.id, 'JOIN')}
                     className="text-primary text-sm font-bold hover:underline mt-2 cursor-pointer"
                   >
                     Đổi ý? Tham gia lại
@@ -593,7 +593,7 @@ const Vote: React.FC = () => {
                       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 bg-surface border border-red-500/50 p-2 rounded-full px-4">
                         <span className="text-xs text-white font-bold">Huỷ kèo và xoá vote?</span>
                         <button
-                          onClick={() => handleParticipation(poll.id,'DECLINE')}
+                          onClick={() => handleParticipation(poll.id, 'DECLINE')}
                           className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-full font-bold transition-all cursor-pointer"
                         >
                           Đúng
@@ -623,7 +623,7 @@ const Vote: React.FC = () => {
                       <Calendar className="text-primary" size={20} /> Chốt ngày chiến
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {poll.timeOptions.slice().sort((a,b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(timeOpt => {
+                      {poll.timeOptions.slice().sort((a, b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(timeOpt => {
                         const isVoted = timeOpt.votes.includes(user?.id || '');
                         const voteCount = timeOpt.votes.length;
                         const dateInfo = formatDate(timeOpt.text);
@@ -637,7 +637,7 @@ const Vote: React.FC = () => {
                         return (
                           <div
                             key={timeOpt.id}
-                            onClick={() => !ended && !isAdmin && !isAnyVoting && handleVote(poll.id,timeOpt.id,'timeOptions')}
+                            onClick={() => !ended && !isAdmin && !isAnyVoting && handleVote(poll.id, timeOpt.id, 'timeOptions')}
                             className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1 
                                                     ${isWinner ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105 z-10' : ''}
                                                     ${isDimmed ? 'opacity-40 grayscale border-border' : ''}
@@ -690,12 +690,12 @@ const Vote: React.FC = () => {
                             )}
 
                             <div className="mt-3 w-full border-t border-white/10 pt-2 flex flex-col items-center gap-2"
-                              onClick={(e) => { e.stopPropagation(); openVotersModal(timeOpt.text,timeOpt.votes); }}
+                              onClick={(e) => { e.stopPropagation(); openVotersModal(timeOpt.text, timeOpt.votes); }}
                             >
                               <div className={`text-xs font-bold hover:underline cursor-pointer ${isWinner ? 'text-yellow-400' : ''}`}>{voteCount} phiếu</div>
                               {/* Mini avatars for time */}
                               <div className="flex justify-center -space-x-1 h-6 cursor-pointer">
-                                {timeOpt.votes.slice(0,3).map(uid => {
+                                {timeOpt.votes.slice(0, 3).map(uid => {
                                   const voter = getVoterInfo(uid);
                                   return (
                                     <img
@@ -720,7 +720,7 @@ const Vote: React.FC = () => {
                       {/* --- ADD TIME BUTTON --- */}
                       {!ended && participationStatus === 'JOIN' && !isAdmin && (poll.allowMemberAddTimes !== false) && (
                         <button
-                          onClick={() => openAddModal(poll.id,'timeOptions')}
+                          onClick={() => openAddModal(poll.id, 'timeOptions')}
                           className="relative overflow-hidden p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer h-full min-h-[160px]"
                         >
                           <div className="w-10 h-10 rounded-full bg-surface border border-border group-hover:border-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors">
@@ -746,8 +746,8 @@ const Vote: React.FC = () => {
                     )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {poll.options.slice().sort((a,b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(option => {
-                      const totalVotes = poll.options.reduce((acc,curr) => acc + curr.votes.length,0);
+                    {poll.options.slice().sort((a, b) => b.votes.length - a.votes.length || a.text.localeCompare(b.text)).map(option => {
+                      const totalVotes = poll.options.reduce((acc, curr) => acc + curr.votes.length, 0);
                       const percent = totalVotes === 0 ? 0 : Math.round((option.votes.length / totalVotes) * 100);
                       const isVoted = option.votes.includes(user?.id || '');
                       const isLeading = Math.max(...poll.options.map(o => o.votes.length)) === option.votes.length && option.votes.length > 0;
@@ -819,10 +819,10 @@ const Vote: React.FC = () => {
                             </div>
 
                             <div className="mt-auto pt-4 border-t border-border">
-                              <div className="flex justify-between items-end mb-2 cursor-pointer" onClick={() => openVotersModal(option.text,option.votes)}>
+                              <div className="flex justify-between items-end mb-2 cursor-pointer" onClick={() => openVotersModal(option.text, option.votes)}>
                                 <div className="flex -space-x-2">
                                   {/* Display Voter Avatars */}
-                                  {option.votes.slice(0,4).map((uid) => {
+                                  {option.votes.slice(0, 4).map((uid) => {
                                     const voter = getVoterInfo(uid);
                                     return (
                                       <div key={uid} className="relative group/avatar">
@@ -849,15 +849,14 @@ const Vote: React.FC = () => {
                               </div>
 
                               <button
-                                onClick={() => handleVote(poll.id,option.id,'options')}
+                                onClick={() => handleVote(poll.id, option.id, 'options')}
                                 disabled={ended || participationStatus !== 'JOIN' || isAdmin || !!votingId}
                                 className={`w-full py-3 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${isVoted
                                   ? 'bg-primary text-background hover:bg-primary-hover'
                                   : 'bg-background text-white border border-border hover:border-primary hover:text-primary'
-                                  } ${
-                                    (ended || isAdmin) ? 'cursor-not-allowed opacity-50'
+                                  } ${(ended || isAdmin) ? 'cursor-not-allowed opacity-50'
                                     : votingId === option.id ? 'cursor-wait'
-                                    : 'cursor-pointer'
+                                      : 'cursor-pointer'
                                   }`}
                               >
                                 {votingId === option.id ? (
@@ -880,7 +879,7 @@ const Vote: React.FC = () => {
                     {/* --- ADD LOCATION BUTTON --- */}
                     {!ended && participationStatus === 'JOIN' && !isAdmin && (poll.allowMemberAddPlaces !== false) && (
                       <button
-                        onClick={() => openAddModal(poll.id,'options')}
+                        onClick={() => openAddModal(poll.id, 'options')}
                         className="group relative flex flex-col items-center justify-center bg-surface/30 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 text-secondary hover:text-primary transition-all p-8 min-h-[300px]"
                       >
                         <div className="w-16 h-16 rounded-full bg-surface border-2 border-border group-hover:border-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors mb-4">
@@ -902,12 +901,12 @@ const Vote: React.FC = () => {
                           <Beer className={`${participant?.isNonDrinker ? 'text-secondary opacity-50' : 'text-primary'}`} size={24} /> Trạng thái nhậu 🍻
                         </h4>
                         <p className="text-sm text-secondary mt-1">
-                          {participant?.isNonDrinker 
-                            ? "Bạn đã chọn KHÔNG UỐNG. Hệ thống sẽ chỉ chia tiền mồi (đồ ăn)." 
+                          {participant?.isNonDrinker
+                            ? "Bạn đã chọn KHÔNG UỐNG. Hệ thống sẽ chỉ chia tiền mồi (đồ ăn)."
                             : "Uống tới bến! Bạn sẽ cùng chia tiền bia với anh em."}
                         </p>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 bg-background/50 p-2 pr-4 rounded-full border border-border">
                         <button
                           onClick={() => handleNoDrinkVote(poll.id)}
@@ -942,9 +941,9 @@ const Vote: React.FC = () => {
                         </h4>
                         <p className="text-sm text-secondary mt-1">An toàn là trên hết! Đăng ký đi taxi để anh em sắp xếp.</p>
                       </div>
-                      <div className="flex items-center gap-2" onClick={() => openVotersModal("Danh sách đi Taxi 🚕",poll.taxiVoters || [])}>
+                      <div className="flex items-center gap-2" onClick={() => openVotersModal("Danh sách đi Taxi 🚕", poll.taxiVoters || [])}>
                         <div className="flex -space-x-1">
-                          {(poll.taxiVoters || []).slice(0,3).map(uid => (
+                          {(poll.taxiVoters || []).slice(0, 3).map(uid => (
                             <img key={uid} src={getVoterInfo(uid).avatar} className="w-6 h-6 rounded-full border border-surface bg-background" />
                           ))}
                         </div>
@@ -960,11 +959,10 @@ const Vote: React.FC = () => {
                         <button
                           onClick={() => handleTaxiVote(poll.id)}
                           disabled={isAdmin || ended || togglingTaxi}
-                          className={`w-full py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 ${
-                            (poll.taxiVoters || []).includes(user?.id || '')
-                              ? 'bg-primary text-background hover:bg-primary-hover shadow-[0_0_20px_rgba(244,140,37,0.3)]'
-                              : 'bg-surface border border-border text-white hover:border-primary hover:text-primary'
-                          } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : (togglingTaxi ? 'cursor-wait opacity-70' : 'cursor-pointer')}`}
+                          className={`w-full py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 ${(poll.taxiVoters || []).includes(user?.id || '')
+                            ? 'bg-primary text-background hover:bg-primary-hover shadow-[0_0_20px_rgba(244,140,37,0.3)]'
+                            : 'bg-surface border border-border text-white hover:border-primary hover:text-primary'
+                            } ${isAdmin || ended ? 'opacity-50 cursor-not-allowed' : (togglingTaxi ? 'cursor-wait opacity-70' : 'cursor-pointer')}`}
                         >
                           {togglingTaxi ? (
                             <span className="flex items-center gap-2">
@@ -984,11 +982,11 @@ const Vote: React.FC = () => {
                           )}
                         </button>
                       </div>
-                      
+
                       <div className="p-4 flex items-center justify-center border border-dashed border-border rounded-xl opacity-60">
-                         <div className="text-center">
-                            <p className="text-xs text-secondary">"Bảo vệ bản thân, bảo vệ túi tiền...<br/>vì bùng kèo taxi cũng bị phạt (đùa đấy)"</p>
-                         </div>
+                        <div className="text-center">
+                          <p className="text-xs text-secondary">"Bảo vệ bản thân, bảo vệ túi tiền...<br />vì bùng kèo taxi cũng bị phạt (đùa đấy)"</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1066,7 +1064,7 @@ const Vote: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-surface border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button
-              onClick={() => setAddModal({ ...addModal,show: false })}
+              onClick={() => setAddModal({ ...addModal, show: false })}
               className="absolute top-4 right-4 text-secondary hover:text-white cursor-pointer"
             >
               <XCircle size={24} />
@@ -1149,14 +1147,14 @@ const Vote: React.FC = () => {
 
       {/* --- VIEW VOTERS MODAL (Simple) --- */}
       {viewVotersModal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setViewVotersModal({ ...viewVotersModal, show: false })}>
           <div className="bg-surface border border-border rounded-2xl w-full max-w-sm p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-bold text-white">Danh sách vote</h3>
                 <p className="text-sm text-primary font-bold">{viewVotersModal.title}</p>
               </div>
-              <button onClick={() => setViewVotersModal({ ...viewVotersModal,show: false })} className="text-secondary hover:text-white cursor-pointer">
+              <button onClick={() => setViewVotersModal({ ...viewVotersModal, show: false })} className="text-secondary hover:text-white cursor-pointer">
                 <XCircle size={24} />
               </button>
             </div>
@@ -1193,11 +1191,11 @@ const Vote: React.FC = () => {
 
         // All member IDs who have responded (JOIN or DECLINE)
         const joinedIds = Object.entries(participants)
-          .filter(([,p]) => p.status === 'JOIN')
+          .filter(([, p]) => p.status === 'JOIN')
           .map(([uid]) => uid);
 
         const declinedIds = Object.entries(participants)
-          .filter(([,p]) => p.status === 'DECLINE')
+          .filter(([, p]) => p.status === 'DECLINE')
           .map(([uid]) => uid);
 
         // For each joined member: find which venue(s) they voted for
@@ -1225,11 +1223,10 @@ const Vote: React.FC = () => {
                   {voter.name && voter.name !== voter.nickname && (
                     <span className="text-xs text-secondary">({voter.name})</span>
                   )}
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
-                    isNonDrinker
-                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                      : 'bg-primary/10 text-primary border-primary/30'
-                  }`}>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${isNonDrinker
+                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                    : 'bg-primary/10 text-primary border-primary/30'
+                    }`}>
                     {isNonDrinker ? '🥤 No beer' : '🍺 Có uống'}
                   </span>
                 </div>
@@ -1257,7 +1254,7 @@ const Vote: React.FC = () => {
         };
 
         // Sort: fully voted first, then those missing venue/time
-        const sortedJoined = [...joinedIds].sort((a,b) => {
+        const sortedJoined = [...joinedIds].sort((a, b) => {
           const aFull = getVotedVenues(a).length > 0;
           const bFull = getVotedVenues(b).length > 0;
           if (aFull && !bFull) return -1;
@@ -1266,13 +1263,13 @@ const Vote: React.FC = () => {
         });
 
         // Users who have NOT responded at all (not in participants)
-        const respondedIds = new Set([...joinedIds,...declinedIds]);
+        const respondedIds = new Set([...joinedIds, ...declinedIds]);
         const pendingIds = users
           .filter(u => u.role !== UserRole.ADMIN && !respondedIds.has(u.id))
           .map(u => u.id);
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setStatusModal({ show: false,pollId: '' })}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setStatusModal({ show: false, pollId: '' })}>
             <div className="bg-surface border border-border rounded-2xl w-full max-w-[460px] shadow-2xl flex flex-col max-h-[88vh]" onClick={e => e.stopPropagation()}>
 
               {/* Header */}
@@ -1284,7 +1281,7 @@ const Vote: React.FC = () => {
                   </h3>
                   <p className="text-xs text-secondary mt-0.5 truncate max-w-[280px]">{currentPoll.title}</p>
                 </div>
-                <button onClick={() => setStatusModal({ show: false,pollId: '' })} className="text-secondary hover:text-white cursor-pointer shrink-0 ml-2">
+                <button onClick={() => setStatusModal({ show: false, pollId: '' })} className="text-secondary hover:text-white cursor-pointer shrink-0 ml-2">
                   <XCircle size={22} />
                 </button>
               </div>
@@ -1402,7 +1399,7 @@ const Vote: React.FC = () => {
 
 export default Vote;
 // Helper for trophy icon
-function Trophy({ size,className }: { size: number,className?: string }) {
+function Trophy({ size, className }: { size: number, className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
