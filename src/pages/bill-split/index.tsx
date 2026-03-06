@@ -448,7 +448,7 @@ const BillSplit: React.FC = () => {
       Object.keys(itemsWithCodes).forEach(uid => {
           if (!itemsWithCodes[uid].isPaid && !itemsWithCodes[uid].paymentCode) {
               const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
-              itemsWithCodes[uid].paymentCode = `NHAU${randomStr}`;
+              itemsWithCodes[uid].paymentCode = `NHAUJS${randomStr}`;
           }
       });
 
