@@ -27,14 +27,31 @@ export async function onRequestPost({ request }) {
     const prefix = mappingData.fields.prefix.stringValue || "";
 
     // 3. Cập nhật trạng thái 'isPaid' sang TRUE trong Poll
-    // Firestore REST API dùng PATCH và updateMask để update nested fields
     const pollUpdateUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${prefix}polls/${pollId}?updateMask.fieldPaths=bill.items.${userId}.isPaid&updateMask.fieldPaths=bill.items.${userId}.paidAmount&updateMask.fieldPaths=bill.items.${userId}.paidAt`;
 
     const updateBody = {
       fields: {
-        [`bill.items.${userId}.isPaid`]: { booleanValue: true },
-        [`bill.items.${userId}.paidAmount`]: { integerValue: amount },
-        [`bill.items.${userId}.paidAt`]: { integerValue: Date.now() }
+        bill: {
+          mapValue: {
+            fields: {
+              items: {
+                mapValue: {
+                  fields: {
+                    [userId]: {
+                      mapValue: {
+                        fields: {
+                          isPaid: { booleanValue: true },
+                          paidAmount: { integerValue: String(amount) },
+                          paidAt: { integerValue: String(Date.now()) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     };
 
