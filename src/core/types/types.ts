@@ -44,13 +44,13 @@ export interface ParticipantData {
 
 export interface BillItem {
   userId: string;
-  amount: number; // Tien tang 1 (chia deu hoac le)
-  round2Amount: number; // Tien tang 2
-  taxiAmount?: number; // Tien taxi
+  amount: number; // Tiền tăng 1 (chia đều hoặc lẻ)
+  round2Amount: number; // Tiền tăng 2
+  taxiAmount?: number; // Tiền taxi
   isPaid: boolean;
-  paymentCode?: string; // Unique code for SePay matching (e.g. NHAU-ABC12-XYZ)
-  paidAmount?: number; // Actual amount received via bank transfer
-  paidAt?: number; // Timestamp when payment was confirmed
+  paymentCode?: string; // Mã thanh toán SePay
+  paidAmount?: number; // Số tiền đã nhận
+  paidAt?: number; // Thời điểm nhận tiền
 }
 
 export interface BillInfo {
