@@ -180,8 +180,10 @@ const BillSplit: React.FC = () => {
               amount: 0,
               round2Amount: 0,
               taxiAmount: 0,
-              isPaid: false
+              isPaid: false,
+              paymentCode: isAdmin ? `NHAUJS${Math.random().toString(36).substring(2, 7).toUpperCase()}` : ''
             };
+            if (isAdmin) setIsDirty(true);
           }
         });
 
@@ -199,13 +201,15 @@ const BillSplit: React.FC = () => {
             amount: 0,
             round2Amount: 0,
             taxiAmount: 0,
-            isPaid: false
+            isPaid: false,
+            paymentCode: isAdmin ? `NHAUJS${Math.random().toString(36).substring(2, 7).toUpperCase()}` : ''
           };
         });
         setUserItems(initialItems);
+        if (isAdmin) setIsDirty(true);
       }
     }
-  },[selectedPoll]);
+  },[selectedPoll, isAdmin]);
 
   // --- Real-time Auto-refresh logic ---
   useEffect(() => {
@@ -869,8 +873,17 @@ const BillSplit: React.FC = () => {
                             </div>
                           )}
 
-                          <div className="text-sm text-secondary text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
-                            Nội dung CK: <span className="text-white font-bold select-all">{qrDesc}</span>
+                          <div className="text-sm text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
+                            {currentItem?.paymentCode ? (
+                              <div className="text-secondary text-[11px] mb-1">
+                                Nội dung CK (Bắt buộc giữ mã <span className="text-primary font-bold">NHAUJS</span>): 
+                                <span className="text-white font-bold select-all block mt-1 bg-background/50 p-2 rounded border border-white/10 text-base">{qrDesc}</span>
+                              </div>
+                            ) : (
+                              <div className="text-red-400 font-bold animate-pulse text-xs py-2">
+                                ⚠️ Admin cần nhấn "Lưu Bill" để kích hoạt Auto-check cho bạn!
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
