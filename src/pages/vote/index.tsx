@@ -366,7 +366,7 @@ const Vote: React.FC = () => {
             <span>🔥 Đang diễn ra</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black leading-tight tracking-tight text-white">
-            Chốt kèo lẹ lẹ testtt
+            Chốt kèo lẹ lẹ testtt 22222222222
           </h2>
         </div>
       </section>

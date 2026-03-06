@@ -870,7 +870,7 @@ const BillSplit: React.FC = () => {
                           )}
 
                           <div className="text-sm text-secondary text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
-                            Nội dung CK: <span className="text-white font-bold select-all">"ghi tên vào nhé"</span>
+                            Nội dung CK: <span className="text-white font-bold select-all">{qrDesc}</span>
                           </div>
                         </div>
                       </div>
