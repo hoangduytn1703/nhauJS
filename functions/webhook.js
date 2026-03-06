@@ -10,25 +10,37 @@ export async function onRequestPost({ request }) {
 
     if (transferType !== 'IN') return new Response('Ignored', { status: 200 });
 
-    // 1. Tìm mã NHAU (SePay gửi content)
-    const match = content.match(/NHAU[A-Z0-9]+/i);
-    if (!match) return new Response('No valid code found', { status: 200 });
+    // 1. Tìm mã định danh (Regex lấy chữ NHAU/NHAUJS kèm 3-10 ký tự chữ/số)
+    const match = content.match(/NHAU(JS)?[A-Z0-9]{3,10}/i);
+    if (!match) return new Response(`Ignored: No valid NHAUJS code in content "${content}"`, { status: 200 });
     const paymentCode = match[0].toUpperCase();
 
     const projectId = "nhaujs";
     
-    // 2. Tra cứu Mapping (Lấy UID, PollID)
+    // 2. Tra cứu Mapping (Lấy UID, PollID, Prefix)
     const mappingRes = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/payment_mappings/${paymentCode}`);
-    if (!mappingRes.ok) return new Response('Mapping not found', { status: 200 });
+    if (!mappingRes.ok) return new Response(`Ignored: Payment code ${paymentCode} not mapped in database`, { status: 200 });
 
     const mappingData = await mappingRes.json();
+    if (!mappingData.fields) return new Response('Invalid mapping data structure', { status: 200 });
+
     const pollId = mappingData.fields.pollId.stringValue;
     const userId = mappingData.fields.userId.stringValue;
-    const prefix = mappingData.fields.prefix.stringValue || "";
+    const prefix = mappingData.fields.prefix ? mappingData.fields.prefix.stringValue : "";
+
+    // Poll Path (Đảm bảo prefix kết thúc bằng / nếu có, hoặc để trống)
+    // Thực tế trong logic Save, prefix là 'ob_' hoặc 'du2_'
+    const pollPath = `${prefix}polls/${pollId}`;
 
     // 3. Cập nhật trạng thái 'isPaid' sang TRUE trong Poll
-    const pollUpdateUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${prefix}polls/${pollId}?updateMask.fieldPaths=bill.items.${userId}.isPaid&updateMask.fieldPaths=bill.items.${userId}.paidAmount&updateMask.fieldPaths=bill.items.${userId}.paidAt`;
+    // Sử dụng query parameter `updateMask.fieldPaths` cho các trường nested
+    const fieldIsPaid = `bill.items.${userId}.isPaid`;
+    const fieldAmount = `bill.items.${userId}.paidAmount`;
+    const fieldAt = `bill.items.${userId}.paidAt`;
 
+    const pollUpdateUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${pollPath}?updateMask.fieldPaths=${fieldIsPaid}&updateMask.fieldPaths=${fieldAmount}&updateMask.fieldPaths=${fieldAt}`;
+
+    // Cấu trúc lồng nhau bắt buộc phải khớp với updateMask
     const updateBody = {
       fields: {
         bill: {
@@ -62,8 +74,9 @@ export async function onRequestPost({ request }) {
     });
 
     if (!writeRes.ok) {
-        console.error("Firestore Write Failed:", await writeRes.text());
-        return new Response('Update Database Failed', { status: 500 });
+        const errorText = await writeRes.text();
+        console.error("Firestore Write Failed:", errorText);
+        return new Response(`Update Database Failed: ${errorText}`, { status: 500 });
     }
 
     console.log(`[SePay Success] Updated Poll ${pollId} for User ${userId}`);
