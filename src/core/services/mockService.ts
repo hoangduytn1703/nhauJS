@@ -249,6 +249,21 @@ export const SettingsService = {
 };
 
 export const DataService = {
+  // Save mapping between payment code and user/poll for fast lookup by webhook
+  savePaymentMapping: async (paymentCode: string, data: { pollId: string, userId: string, prefix: string }): Promise<void> => {
+    await setDoc(doc(db, "payment_mappings", paymentCode), data);
+  },
+
+  // Mark a user's bill as paid
+  markAsPaidBySepay: async (pollId: string, userId: string, paidAmount: number, collPrefix: string = ""): Promise<void> => {
+    const pollRef = doc(db, `${collPrefix}polls`, pollId);
+    await updateDoc(pollRef, {
+      [`bill.items.${userId}.isPaid`]: true,
+      [`bill.items.${userId}.paidAmount`]: paidAmount,
+      [`bill.items.${userId}.paidAt`]: Date.now(),
+    });
+  },
+
   getUser: async (userId: string): Promise<User | null> => {
     const snap = await getDoc(doc(db, getColl("users"), userId));
     return snap.exists() ? snap.data() as User : null;

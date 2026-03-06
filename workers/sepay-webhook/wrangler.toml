@@ -1,0 +1,13 @@
+name = "nhau-sepay-webhook"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Firebase project config - set these via `wrangler secret put` for production
+FIREBASE_PROJECT_ID = "nhaujs"
+# The bank account number to verify incoming transactions
+BANK_ACCOUNT_NUMBER = "006563589"
+
+# Secrets (set via `wrangler secret put SECRET_NAME`):
+# FIREBASE_API_KEY - Firebase Web API Key
+# SEPAY_WEBHOOK_SECRET - (Optional) Secret token for webhook verification

@@ -48,6 +48,9 @@ export interface BillItem {
   round2Amount: number; // Tiền tăng 2
   taxiAmount?: number; // Tiền taxi
   isPaid: boolean;
+  paymentCode?: string; // Mã thanh toán SePay
+  paidAmount?: number; // Số tiền đã nhận
+  paidAt?: number; // Thời điểm nhận tiền
 }
 
 export interface BillInfo {

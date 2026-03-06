@@ -418,10 +418,21 @@ const BillSplit: React.FC = () => {
     if (!selectedPollId || !isAdmin) return;
     setSaving(true);
     try {
-      const total = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
-      await DataService.updateBill(selectedPollId,{
+      // 1. Generate payment codes for everyone who hasn't paid
+      const itemsWithCodes = { ...userItems };
+      Object.keys(itemsWithCodes).forEach(uid => {
+          if (!itemsWithCodes[uid].isPaid && !itemsWithCodes[uid].paymentCode) {
+              const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+              itemsWithCodes[uid].paymentCode = `NHAU${randomStr}`;
+          }
+      });
+
+      const total = Object.values(itemsWithCodes).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
+      
+      // 2. Save Poll with updated items (including payment codes)
+      await DataService.updateBill(selectedPollId, {
         imageUrl: billImage,
-        items: userItems,
+        items: itemsWithCodes,
         totalAmount: total,
         baseAmount,
         baseAmountBeer,
@@ -431,11 +442,29 @@ const BillSplit: React.FC = () => {
         round2AmountFood,
         totalTaxiAmount
       });
+
+      // 3. Save mappings for fast lookup by Webhook
+      const isD2 = location.pathname.includes('/du2');
+      const prefix = isOnlyBill ? 'ob_' : isD2 ? 'du2_' : '';
+      
+      const mappingPromises = Object.keys(itemsWithCodes).map(uid => {
+          const item = itemsWithCodes[uid];
+          if (item.paymentCode) {
+              return DataService.savePaymentMapping(item.paymentCode, {
+                  pollId: selectedPollId,
+                  userId: uid,
+                  prefix: prefix
+              });
+          }
+          return Promise.resolve();
+      });
+      await Promise.all(mappingPromises);
+
       setIsDirty(false);
-      alert('Lưu bill thành công!');
+      alert('Lưu bill thành công! Hệ thống đã sẵn sàng nhận tiền auto-check.');
       refreshData();
     } catch (e) {
-      alert('Lỗi khi lưu');
+      alert('Lỗi khi lưu: ' + (e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -453,7 +482,13 @@ const BillSplit: React.FC = () => {
   const bankBin = selectedPoll?.bankInfo?.bankBin || "970441";
   const bankAccount = selectedPoll?.bankInfo?.accountNumber || "006563589";
   const bankName = selectedPoll?.bankInfo?.bankName || "VIB";
-  const qrDesc = `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
+  
+  // NẾU CÓ paymentCode THÌ PHẢI ĐƯA VÀO NỘI DUNG CHUYỂN KHOẢN ĐỂ SEPAY NHẬN DIỆN
+  const currentItem = effectiveUserId && userItems[effectiveUserId];
+  const qrDesc = currentItem?.paymentCode 
+    ? currentItem.paymentCode 
+    : `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
+    
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(selectedPoll?.bankInfo?.accountHolder || '')}`;
 
   // Helper for deleted users
