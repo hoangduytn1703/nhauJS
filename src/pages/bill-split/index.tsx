@@ -478,10 +478,11 @@ const BillSplit: React.FC = () => {
   const userTotalAmount = currentUserItem ? (currentUserItem.amount + currentUserItem.round2Amount + (currentUserItem.taxiAmount || 0)) : 0;
   const currentDisplayName = users[effectiveUserId || '']?.nickname || 'Khach';
 
-  // VietQR URL - Use bank info from poll or fallback to VIB
-  const bankBin = selectedPoll?.bankInfo?.bankBin || "970441";
-  const bankAccount = selectedPoll?.bankInfo?.accountNumber || "006563589";
-  const bankName = selectedPoll?.bankInfo?.bankName || "VIB";
+  // VietQR URL - Use bank info from poll or fallback to MB Bank
+  const bankBin = selectedPoll?.bankInfo?.bankBin || "970422";
+  const bankAccount = selectedPoll?.bankInfo?.accountNumber || "0559204549";
+  const bankName = selectedPoll?.bankInfo?.bankName || "MB Bank";
+  const accountHolder = selectedPoll?.bankInfo?.accountHolder || "NGUYEN HOANG DUY";
   
   // NẾU CÓ paymentCode THÌ PHẢI ĐƯA VÀO NỘI DUNG CHUYỂN KHOẢN ĐỂ SEPAY NHẬN DIỆN
   const currentItem = effectiveUserId && userItems[effectiveUserId];
@@ -489,7 +490,7 @@ const BillSplit: React.FC = () => {
     ? currentItem.paymentCode 
     : `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
     
-  const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(selectedPoll?.bankInfo?.accountHolder || '')}`;
+  const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(accountHolder)}`;
 
   // Helper for deleted users
   const getDisplayUser = (uid: string) => {
