@@ -4,11 +4,13 @@
 export async function onRequestPost({ request }) {
   try {
     const body = await request.json();
-    const { content, amount, transferType, transactionDate } = body;
+    const content = body.content || '';
+    const amount = body.transferAmount || body.amount || 0;
+    const transferType = (body.transferType || '').toUpperCase();
 
     console.log(`[SePay Log] ${content} - ${amount} - ${transferType}`);
 
-    if (transferType !== 'IN') return new Response('Ignored', { status: 200 });
+    if (transferType !== 'IN') return new Response(`Ignored: TransferType ${transferType}`, { status: 200 });
 
     // 1. Tìm mã định danh (Regex lấy chữ NHAU/NHAUJS kèm 3-10 ký tự chữ/số)
     const match = content.match(/NHAU(JS)?[A-Z0-9]{3,10}/i);
