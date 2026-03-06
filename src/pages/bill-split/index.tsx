@@ -1,8 +1,10 @@
 import React,{ useState,useEffect,useRef } from 'react';
-import { DataService } from '@/core/services/mockService';
+import { DataService, generatePaymentCode } from '@/core/services/mockService';
+import { db } from '@/core/services/firebaseConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { Poll,User,BillItem,UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users,Beer } from 'lucide-react';
+import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users,Beer,Zap,Clock } from 'lucide-react';
 import { Link,useNavigate,useLocation,useSearchParams } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
@@ -82,6 +84,44 @@ const BillSplit: React.FC = () => {
   const [sortMode,setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
   const [isDirty,setIsDirty] = useState(false);
   const [showBillZoom, setShowBillZoom] = useState(false);
+
+  // Real-time listener for payment status updates (SePay webhook)
+  useEffect(() => {
+    if (!selectedPollId) return;
+    const isOB = location.pathname.includes('/only-bill');
+    const isD2 = location.pathname.includes('/du2');
+    const prefix = isOB ? 'ob_' : isD2 ? 'du2_' : '';
+    const pollRef = doc(db, `${prefix}polls`, selectedPollId);
+
+    const unsubscribe = onSnapshot(pollRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as Poll;
+      if (data.bill?.items) {
+        setUserItems(prev => {
+          const next = { ...prev };
+          // Only update isPaid, paidAmount, paidAt from real-time data
+          Object.keys(data.bill!.items).forEach(uid => {
+            if (next[uid] && data.bill!.items[uid]) {
+              const remote = data.bill!.items[uid];
+              if (remote.isPaid && !next[uid].isPaid) {
+                // Payment confirmed by webhook - update locally
+                next[uid] = {
+                  ...next[uid],
+                  isPaid: remote.isPaid,
+                  paidAmount: remote.paidAmount,
+                  paidAt: remote.paidAt,
+                  paymentCode: remote.paymentCode,
+                };
+              }
+            }
+          });
+          return next;
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedPollId]);
 
   // Helper to round up to nearest 1,000
   const roundToThousand = (val: number) => Math.ceil(val / 1000) * 1000;
@@ -418,10 +458,22 @@ const BillSplit: React.FC = () => {
     if (!selectedPollId || !isAdmin) return;
     setSaving(true);
     try {
-      const total = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
+      // Auto-generate payment codes for each user if not existing
+      const itemsWithCodes = { ...userItems };
+      Object.keys(itemsWithCodes).forEach(uid => {
+        if (!itemsWithCodes[uid].paymentCode) {
+          itemsWithCodes[uid] = {
+            ...itemsWithCodes[uid],
+            paymentCode: generatePaymentCode(selectedPollId, uid),
+          };
+        }
+      });
+      setUserItems(itemsWithCodes);
+
+      const total = (Object.values(itemsWithCodes) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
       await DataService.updateBill(selectedPollId,{
         imageUrl: billImage,
-        items: userItems,
+        items: itemsWithCodes,
         totalAmount: total,
         baseAmount,
         baseAmountBeer,
@@ -432,10 +484,10 @@ const BillSplit: React.FC = () => {
         totalTaxiAmount
       });
       setIsDirty(false);
-      alert('Lưu bill thành công!');
+      alert('Luu bill thanh cong! Payment codes da duoc tao tu dong.');
       refreshData();
     } catch (e) {
-      alert('Lỗi khi lưu');
+      alert('Loi khi luu');
     } finally {
       setSaving(false);
     }
@@ -453,7 +505,9 @@ const BillSplit: React.FC = () => {
   const bankBin = selectedPoll?.bankInfo?.bankBin || "970441";
   const bankAccount = selectedPoll?.bankInfo?.accountNumber || "006563589";
   const bankName = selectedPoll?.bankInfo?.bankName || "VIB";
-  const qrDesc = `${currentDisplayName} thanh toan ${selectedPoll?.title || ''}`;
+  // Use payment code as transfer description for SePay auto-matching
+  const userPaymentCode = currentUserItem?.paymentCode || generatePaymentCode(selectedPollId, effectiveUserId || '');
+  const qrDesc = userPaymentCode;
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(selectedPoll?.bankInfo?.accountHolder || '')}`;
 
   // Helper for deleted users
@@ -806,8 +860,36 @@ const BillSplit: React.FC = () => {
                             </div>
                           )}
 
-                          <div className="text-sm text-secondary text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
-                            Nội dung CK: <span className="text-white font-bold select-all">"ghi tên vào nhé"</span>
+                          <div className="text-sm text-secondary text-center md:text-left bg-primary/10 p-3 rounded-lg border border-primary/20 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Zap size={14} className="text-primary" />
+                              <span className="font-bold text-primary text-xs uppercase tracking-wider">Auto-check by SePay</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Noi dung CK:</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-black font-mono text-lg select-all bg-black/30 px-3 py-1 rounded">{userPaymentCode}</span>
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(userPaymentCode); alert('Da copy ma thanh toan!') }}
+                                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded cursor-pointer"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-secondary/70 italic">Ghi dung noi dung nay de he thong tu dong xac nhan thanh toan</p>
+                            {currentUserItem?.isPaid && (
+                              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-2 mt-2">
+                                <Check size={16} className="text-green-500" />
+                                <span className="text-green-400 font-bold text-sm">Da thanh toan</span>
+                                {currentUserItem.paidAt && (
+                                  <span className="text-green-500/60 text-xs ml-auto flex items-center gap-1">
+                                    <Clock size={10} />
+                                    {new Date(currentUserItem.paidAt).toLocaleString('vi-VN')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1015,7 +1097,7 @@ const BillSplit: React.FC = () => {
                           {(item.amount + item.round2Amount + (item.taxiAmount || 0)).toLocaleString()} đ
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center">
+                          <div className="flex flex-col items-center gap-1">
                             {!isAdmin ? (
                               <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${item.isPaid ? 'bg-green-500 text-background border-none shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/5 border border-white/10'}`}>
                                 {item.isPaid && <Check size={14} className="stroke-[4px]" />}
@@ -1028,6 +1110,12 @@ const BillSplit: React.FC = () => {
                                 onChange={e => handleItemChange(item.userId,'isPaid',e.target.checked)}
                                 className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
                               />
+                            )}
+                            {item.isPaid && item.paidAt && (
+                              <span className="text-[9px] text-green-500/60 whitespace-nowrap flex items-center gap-0.5" title={`Auto-confirmed at ${new Date(item.paidAt).toLocaleString('vi-VN')}`}>
+                                <Zap size={8} />
+                                {new Date(item.paidAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             )}
                           </div>
                         </td>

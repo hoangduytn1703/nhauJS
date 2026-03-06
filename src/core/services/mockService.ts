@@ -248,6 +248,40 @@ export const SettingsService = {
   }
 };
 
+// --- Payment Code Utilities ---
+// Generate a short, unique payment code for SePay matching
+// Format: NHAU{4chars from pollId}{4chars from userId} = ~12 chars total
+export const generatePaymentCode = (pollId: string, userId: string): string => {
+  const shortPoll = pollId.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase();
+  const shortUser = userId.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase();
+  return `NHAU${shortPoll}${shortUser}`;
+};
+
+// Mark a user's bill as paid (called by webhook handler via REST API)
+export const markAsPaidBySepay = async (
+  collPrefix: string,
+  pollId: string,
+  userId: string,
+  paidAmount: number
+): Promise<void> => {
+  const pollRef = doc(db, `${collPrefix}polls`, pollId);
+  const pollSnap = await getDoc(pollRef);
+  if (!pollSnap.exists()) throw new Error("Poll not found");
+
+  const pollData = pollSnap.data() as any;
+  const bill = pollData.bill;
+  if (!bill || !bill.items || !bill.items[userId]) {
+    throw new Error("Bill item not found for user");
+  }
+
+  // Update the specific user's payment status
+  await updateDoc(pollRef, {
+    [`bill.items.${userId}.isPaid`]: true,
+    [`bill.items.${userId}.paidAmount`]: paidAmount,
+    [`bill.items.${userId}.paidAt`]: Date.now(),
+  });
+};
+
 export const DataService = {
   getUser: async (userId: string): Promise<User | null> => {
     const snap = await getDoc(doc(db, getColl("users"), userId));
