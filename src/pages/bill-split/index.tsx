@@ -1,11 +1,11 @@
-import React,{ useState,useEffect,useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DataService } from '@/core/services/mockService';
 import { db } from '@/core/services/firebaseConfig';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Poll,User,BillItem,UserRole } from '@/core/types/types';
+import { Poll, User, BillItem, UserRole } from '@/core/types/types';
 import { useAuth } from '@/core/hooks';
-import { Camera,Save,ArrowLeft,Receipt,DollarSign,Calculator,Lock,Info,Copy,Car,RefreshCw,Search,Check,ArrowUpDown,XCircle,Users,Beer } from 'lucide-react';
-import { Link,useNavigate,useLocation,useSearchParams } from 'react-router';
+import { Camera, Save, ArrowLeft, Receipt, DollarSign, Calculator, Lock, Info, Copy, Car, RefreshCw, Search, Check, ArrowUpDown, XCircle, Users, Beer } from 'lucide-react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router';
 
 // --- Internal Component for Formatted Money Input ---
 const MoneyInput: React.FC<{
@@ -13,13 +13,13 @@ const MoneyInput: React.FC<{
   onChange: (val: number) => void;
   disabled?: boolean;
   placeholder?: string;
-}> = ({ value,onChange,disabled,placeholder }) => {
+}> = ({ value, onChange, disabled, placeholder }) => {
   // Format on render: 12000 -> "12,000"
   const displayValue = value === 0 ? '' : value.toLocaleString('en-US');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove commas to get raw number
-    const raw = e.target.value.replace(/,/g,'');
+    const raw = e.target.value.replace(/,/g, '');
     // Allow digits only
     if (!/^\d*$/.test(raw)) return;
 
@@ -46,8 +46,8 @@ const MoneyInput: React.FC<{
 const BillSplit: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [polls,setPolls] = useState<Poll[]>([]);
-  const [users,setUsers] = useState<Record<string,User>>({});
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [users, setUsers] = useState<Record<string, User>>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedPollId = searchParams.get('pollId') || '';
   const selectedPoll = polls.find(p => p.id === selectedPollId);
@@ -59,30 +59,30 @@ const BillSplit: React.FC = () => {
   const effectiveUserId = user?.id || selectedGuestUserId;
 
   // Bill State
-  const [billImage,setBillImage] = useState<string>('');
-  const [userItems,setUserItems] = useState<Record<string,BillItem>>({});
-  const [baseAmount,setBaseAmount] = useState<number>(0);
-  const [baseAmountBeer,setBaseAmountBeer] = useState<number>(0);
-  const baseAmountFood = Math.max(0,baseAmount - baseAmountBeer);
+  const [billImage, setBillImage] = useState<string>('');
+  const [userItems, setUserItems] = useState<Record<string, BillItem>>({});
+  const [baseAmount, setBaseAmount] = useState<number>(0);
+  const [baseAmountBeer, setBaseAmountBeer] = useState<number>(0);
+  const baseAmountFood = Math.max(0, baseAmount - baseAmountBeer);
 
-  const [round2Global,setRound2Global] = useState<number>(0);
-  const [round2AmountBeer,setRound2AmountBeer] = useState<number>(0);
-  const round2AmountFood = Math.max(0,round2Global - round2AmountBeer);
+  const [round2Global, setRound2Global] = useState<number>(0);
+  const [round2AmountBeer, setRound2AmountBeer] = useState<number>(0);
+  const round2AmountFood = Math.max(0, round2Global - round2AmountBeer);
 
-  const [totalTaxiAmount,setTotalTaxiAmount] = useState<number>(0);
-  const [saving,setSaving] = useState(false);
-  const [refreshing,setRefreshing] = useState(false);
+  const [totalTaxiAmount, setTotalTaxiAmount] = useState<number>(0);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Track if auto-split has been triggered
-  const [hasAppliedBase,setHasAppliedBase] = useState(false);
-  const [hasAppliedRound2,setHasAppliedRound2] = useState(false);
+  const [hasAppliedBase, setHasAppliedBase] = useState(false);
+  const [hasAppliedRound2, setHasAppliedRound2] = useState(false);
 
   // New: Map of which users should be automatically re-balanced
-  const [autoBalanceMap,setAutoBalanceMap] = useState<Record<string,boolean>>({});
+  const [autoBalanceMap, setAutoBalanceMap] = useState<Record<string, boolean>>({});
 
-  const [searchTerm,setSearchTerm] = useState('');
-  const [sortMode,setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
-  const [isDirty,setIsDirty] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
+  const [isDirty, setIsDirty] = useState(false);
   const [showBillZoom, setShowBillZoom] = useState(false);
   const [showQRZoom, setShowQRZoom] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -120,9 +120,9 @@ const BillSplit: React.FC = () => {
     setHasAppliedBase(false);
     setHasAppliedRound2(false);
     if (id) {
-        setSearchParams({ pollId: id });
+      setSearchParams({ pollId: id });
     } else {
-        setSearchParams({});
+      setSearchParams({});
     }
   };
 
@@ -130,23 +130,23 @@ const BillSplit: React.FC = () => {
 
   useEffect(() => {
     refreshData();
-  },[]);
+  }, []);
 
   const refreshData = async () => {
     setRefreshing(true);
     try {
-      const [allPolls,allUsers] = await Promise.all([
+      const [allPolls, allUsers] = await Promise.all([
         DataService.getPolls(),
         DataService.getUsers()
       ]);
       const finishedPolls = allPolls.filter(p => (p.deadline > 0 && Date.now() > p.deadline) || !!p.finalizedOptionId || !!p.finalizedTimeId);
       setPolls(finishedPolls);
 
-      const userMap: Record<string,User> = {};
+      const userMap: Record<string, User> = {};
       allUsers.forEach(u => userMap[u.id] = u);
       setUsers(userMap);
     } catch (e) {
-      console.error("Refresh failed",e);
+      console.error("Refresh failed", e);
     } finally {
       setRefreshing(false);
     }
@@ -159,7 +159,7 @@ const BillSplit: React.FC = () => {
       if (!selectedPoll.taxiVoters) {
         selectedPoll.taxiVoters = [];
       }
-      
+
       const confirmedIds = selectedPoll.confirmedAttendances || [];
 
       if (selectedPoll.bill) {
@@ -173,7 +173,7 @@ const BillSplit: React.FC = () => {
         // Merge logic: Only keep confirmed users from saved items, and add missing confirmed users
         const savedItems = selectedPoll.bill.items || {};
         const filteredItems: Record<string, BillItem> = {};
-        
+
         confirmedIds.forEach(uid => {
           if (savedItems[uid]) {
             filteredItems[uid] = savedItems[uid];
@@ -197,7 +197,7 @@ const BillSplit: React.FC = () => {
         setRound2Global(0);
         setTotalTaxiAmount(0);
         // Init new bill from confirmed users
-        const initialItems: Record<string,BillItem> = {};
+        const initialItems: Record<string, BillItem> = {};
         confirmedIds.forEach(uid => {
           initialItems[uid] = {
             userId: uid,
@@ -212,7 +212,7 @@ const BillSplit: React.FC = () => {
         if (isAdmin) setIsDirty(true);
       }
     }
-  },[selectedPoll, isAdmin]);
+  }, [selectedPoll, isAdmin]);
 
   // --- Real-time Auto-refresh logic ---
   useEffect(() => {
@@ -221,31 +221,31 @@ const BillSplit: React.FC = () => {
     const isD2 = location.pathname.includes('/du2');
     const isOB = location.pathname.includes('/only-bill');
     const prefix = isOB ? 'ob_' : isD2 ? 'du2_' : '';
-    
+
     // Lắng nghe sự thay đổi của Poll này trên Firestore
     const unsub = onSnapshot(doc(db, `${prefix}polls`, selectedPollId), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data.bill && data.bill.items) {
-           const items = data.bill.items;
-           
-           // Detect payment success for CURRENT user
-           if (effectiveUserId && items[effectiveUserId]) {
-              const currentlyPaid = !!items[effectiveUserId].isPaid;
-              
-              // If status changed from FALSE to TRUE
-              if (prevPaidRef.current === false && currentlyPaid === true) {
-                 setShowSuccessModal(true);
-                 // Auto close after 5s
-                 setTimeout(() => setShowSuccessModal(false), 5000);
-              }
-              
-              prevPaidRef.current = currentlyPaid;
-           }
+          const items = data.bill.items;
 
-           // Cập nhật trạng thái đóng tiền ngay lập tức lên UI
-           setUserItems(items);
-           console.log("[Real-time] Bill updated from server!");
+          // Detect payment success for CURRENT user
+          if (effectiveUserId && items[effectiveUserId]) {
+            const currentlyPaid = !!items[effectiveUserId].isPaid;
+
+            // If status changed from FALSE to TRUE
+            if (prevPaidRef.current === false && currentlyPaid === true) {
+              setShowSuccessModal(true);
+              // Auto close after 5s
+              setTimeout(() => setShowSuccessModal(false), 5000);
+            }
+
+            prevPaidRef.current = currentlyPaid;
+          }
+
+          // Cập nhật trạng thái đóng tiền ngay lập tức lên UI
+          setUserItems(items);
+          console.log("[Real-time] Bill updated from server!");
         }
       }
     });
@@ -265,7 +265,7 @@ const BillSplit: React.FC = () => {
     const perPersonBeer = drinkers.length > 0 ? roundToThousand(baseAmountBeer / drinkers.length) : 0;
 
     const newItems = { ...userItems };
-    const newAutoMap: Record<string,boolean> = {};
+    const newAutoMap: Record<string, boolean> = {};
     userIds.forEach(uid => {
       const isNonDrinker = !!selectedPoll.participants?.[uid]?.isNonDrinker;
       newItems[uid].amount = perPersonFood + (isNonDrinker ? 0 : perPersonBeer);
@@ -289,7 +289,7 @@ const BillSplit: React.FC = () => {
     const perPersonBeer = drinkers.length > 0 ? roundToThousand(round2AmountBeer / drinkers.length) : 0;
 
     const newItems = { ...userItems };
-    const newAutoMap: Record<string,boolean> = { ...autoBalanceMap };
+    const newAutoMap: Record<string, boolean> = { ...autoBalanceMap };
     userIds.forEach(uid => {
       const isNonDrinker = !!selectedPoll.participants?.[uid]?.isNonDrinker;
       newItems[uid].round2Amount = perPersonFood + (isNonDrinker ? 0 : perPersonBeer);
@@ -334,13 +334,13 @@ const BillSplit: React.FC = () => {
     alert(`Đã chia ${totalTaxiAmount.toLocaleString()}đ cho ${confirmedVoters.length} người có mặt (~${perPerson.toLocaleString()}đ/người)`);
   };
 
-  const handleItemChange = (uid: string,field: keyof BillItem,value: any) => {
+  const handleItemChange = (uid: string, field: keyof BillItem, value: any) => {
     if (!isAdmin) return;
     if (!checkDirtyWarning()) return;
 
     setUserItems(prev => {
       const next = { ...prev };
-      next[uid] = { ...next[uid],[field]: value };
+      next[uid] = { ...next[uid], [field]: value };
 
       // Update AutoBalanceMap: if manually changing amount, lock this user
       const currentAutoMap = { ...autoBalanceMap };
@@ -364,15 +364,15 @@ const BillSplit: React.FC = () => {
 
           const fixedSum = Object.keys(next)
             .filter(id => !currentAutoMap[id])
-            .reduce((sum,id) => sum + (next[id].amount || 0),0);
+            .reduce((sum, id) => sum + (next[id].amount || 0), 0);
 
-          const staticSum = staticIds.reduce((sum,id) => sum + (next[id].amount || 0),0);
+          const staticSum = staticIds.reduce((sum, id) => sum + (next[id].amount || 0), 0);
 
           const remaining = baseAmount - fixedSum - staticSum;
-          const perPerson = Math.max(0,roundToThousand(remaining / priorityIds.length));
+          const perPerson = Math.max(0, roundToThousand(remaining / priorityIds.length));
 
           priorityIds.forEach(id => {
-            next[id] = { ...next[id],amount: perPerson };
+            next[id] = { ...next[id], amount: perPerson };
           });
         }
       }
@@ -389,15 +389,15 @@ const BillSplit: React.FC = () => {
 
           const fixedSum = Object.keys(next)
             .filter(id => !currentAutoMap[id])
-            .reduce((sum,id) => sum + (next[id].round2Amount || 0),0);
+            .reduce((sum, id) => sum + (next[id].round2Amount || 0), 0);
 
-          const staticSum = staticIds.reduce((sum,id) => sum + (next[id].round2Amount || 0),0);
+          const staticSum = staticIds.reduce((sum, id) => sum + (next[id].round2Amount || 0), 0);
 
           const remaining = round2Global - fixedSum - staticSum;
-          const perPerson = Math.max(0,roundToThousand(remaining / priorityIds.length));
+          const perPerson = Math.max(0, roundToThousand(remaining / priorityIds.length));
 
           priorityIds.forEach(id => {
-            next[id] = { ...next[id],round2Amount: perPerson };
+            next[id] = { ...next[id], round2Amount: perPerson };
           });
         }
       }
@@ -423,7 +423,7 @@ const BillSplit: React.FC = () => {
         .map(item => item.userId);
 
       visibleIds.forEach(uid => {
-        next[uid] = { ...next[uid],isPaid: paid };
+        next[uid] = { ...next[uid], isPaid: paid };
       });
       return next;
     });
@@ -454,8 +454,8 @@ const BillSplit: React.FC = () => {
         canvas.width = MAX_WIDTH;
         canvas.height = img.height * scaleSize;
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img,0,0,canvas.width,canvas.height);
-        setBillImage(canvas.toDataURL('image/jpeg',0.8));
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setBillImage(canvas.toDataURL('image/jpeg', 0.8));
       };
       img.src = readerEvent.target?.result as string;
     };
@@ -469,14 +469,14 @@ const BillSplit: React.FC = () => {
       // 1. Generate payment codes for everyone who hasn't paid
       const itemsWithCodes = { ...userItems };
       Object.keys(itemsWithCodes).forEach(uid => {
-          if (!itemsWithCodes[uid].isPaid && !itemsWithCodes[uid].paymentCode) {
-              const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 chars
-              itemsWithCodes[uid].paymentCode = `${randomStr}NHAUJS`; // Now stored as 8K9NHAUJS
-          }
+        if (!itemsWithCodes[uid].isPaid && !itemsWithCodes[uid].paymentCode) {
+          const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase(); // 5 characters
+          itemsWithCodes[uid].paymentCode = `NHAUJS${randomStr}`;
+        }
       });
 
       const total = Object.values(itemsWithCodes).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
-      
+
       // 2. Save Poll with updated items (including payment codes)
       await DataService.updateBill(selectedPollId, {
         imageUrl: billImage,
@@ -494,17 +494,17 @@ const BillSplit: React.FC = () => {
       // 3. Save mappings for fast lookup by Webhook
       const isD2 = location.pathname.includes('/du2');
       const prefix = isOnlyBill ? 'ob_' : isD2 ? 'du2_' : '';
-      
+
       const mappingPromises = Object.keys(itemsWithCodes).map(uid => {
-          const item = itemsWithCodes[uid];
-          if (item.paymentCode) {
-              return DataService.savePaymentMapping(item.paymentCode, {
-                  pollId: selectedPollId,
-                  userId: uid,
-                  prefix: prefix
-              });
-          }
-          return Promise.resolve();
+        const item = itemsWithCodes[uid];
+        if (item.paymentCode) {
+          return DataService.savePaymentMapping(item.paymentCode, {
+            pollId: selectedPollId,
+            userId: uid,
+            prefix: prefix
+          });
+        }
+        return Promise.resolve();
       });
       await Promise.all(mappingPromises);
 
@@ -519,7 +519,7 @@ const BillSplit: React.FC = () => {
   };
 
   // Calculate Total for display
-  const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum,item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0),0);
+  const grandTotal = (Object.values(userItems) as BillItem[]).reduce((sum, item) => sum + Number(item.amount) + Number(item.round2Amount) + Number(item.taxiAmount || 0), 0);
 
   // Calculate User's specific amount for QR code
   const currentUserItem = effectiveUserId && userItems[effectiveUserId];
@@ -531,7 +531,7 @@ const BillSplit: React.FC = () => {
   const bankAccount = selectedPoll?.bankInfo?.accountNumber || "0559204549";
   const bankName = selectedPoll?.bankInfo?.bankName || "MB Bank";
   const accountHolder = selectedPoll?.bankInfo?.accountHolder || "NGUYEN HOANG DUY";
-  
+
   // NẾU CÓ paymentCode THÌ PHẢI ĐƯA VÀO NỘI DUNG CHUYỂN KHOẢN ĐỂ SEPAY NHẬN DIỆN
   const currentItem = effectiveUserId && userItems[effectiveUserId];
   const pollTitleRaw = selectedPoll?.title || '';
@@ -543,10 +543,10 @@ const BillSplit: React.FC = () => {
     year: 'numeric'
   }).replace(/\//g, '/'); // Ensure dd/mm/yyyy
 
-  const qrDesc = currentItem?.paymentCode 
-    ? `${currentItem.paymentCode.replace('NHAUJS', ' NHAUJS')} ${currentDisplayName} ${pollTitleRaw} ${dateStr}`.substring(0, 50).trim()
+  const qrDesc = currentItem?.paymentCode
+    ? `${currentItem.paymentCode.replace('NHAUJS', 'NHAUJS ')} ${currentDisplayName} ${pollTitleRaw} ${dateStr}`.substring(0, 50).trim()
     : `${currentDisplayName} thanh toan ${pollTitleRaw} ${dateStr}`.substring(0, 50).trim();
-    
+
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(accountHolder)}`;
 
   // Helper for deleted users
@@ -564,64 +564,64 @@ const BillSplit: React.FC = () => {
     <div className="pb-20 relative">
       {/* 0. Guest Selection Overlay for Public Only-Bill */}
       {isOnlyBill && !user && !selectedGuestUserId && selectedPoll && (
-          <div className="fixed inset-0 z-[110] bg-background/80 backdrop-blur-xl flex items-center justify-center p-4">
-              <div className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95">
-                  <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                      <Users size={32} className="text-primary" />
-                  </div>
-                  <h2 className="text-2xl font-black text-white text-center mb-2">Bạn là ai?</h2>
-                  <p className="text-secondary text-center text-sm mb-6">Vui lòng chọn tên của bạn trong danh sách để xem bill cá nhân.</p>
-                  
-                  {/* Search Bar */}
-                  <div className="relative mb-4">
-                      <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
-                      <input 
-                        type="text"
-                        placeholder="Tìm tên bạn..."
-                        className="w-full bg-background border border-border rounded-2xl py-3 pl-12 pr-4 text-white outline-none focus:border-primary transition-all shadow-inner"
-                        value={guestSearchTerm}
-                        onChange={(e) => setGuestSearchTerm(e.target.value)}
-                        autoFocus
-                      />
-                  </div>
+        <div className="fixed inset-0 z-[110] bg-background/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95">
+            <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Users size={32} className="text-primary" />
+            </div>
+            <h2 className="text-2xl font-black text-white text-center mb-2">Bạn là ai?</h2>
+            <p className="text-secondary text-center text-sm mb-6">Vui lòng chọn tên của bạn trong danh sách để xem bill cá nhân.</p>
 
-                  <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                      {Object.keys(userItems)
-                        .filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase()))
-                        .map(uid => {
-                          const u = users[uid];
-                          if (!u) return null;
-                          return (
-                              <button 
-                                  key={uid}
-                                  onClick={() => setSelectedGuestUserId(uid)}
-                                  className="w-full flex items-center justify-center p-4 bg-background hover:bg-primary/10 border border-border hover:border-primary/30 rounded-2xl transition-all group"
-                              >
-                                  <span className="font-bold text-lg text-white group-hover:text-primary transition-colors">{u.nickname}</span>
-                              </button>
-                          );
-                      })}
-                      {Object.keys(userItems).filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase())).length === 0 && (
-                          <div className="p-8 text-center text-secondary italic text-sm">Không tìm thấy anh em này...</div>
-                      )}
-                  </div>
-              </div>
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
+              <input
+                type="text"
+                placeholder="Tìm tên bạn..."
+                className="w-full bg-background border border-border rounded-2xl py-3 pl-12 pr-4 text-white outline-none focus:border-primary transition-all shadow-inner"
+                value={guestSearchTerm}
+                onChange={(e) => setGuestSearchTerm(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+              {Object.keys(userItems)
+                .filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase()))
+                .map(uid => {
+                  const u = users[uid];
+                  if (!u) return null;
+                  return (
+                    <button
+                      key={uid}
+                      onClick={() => setSelectedGuestUserId(uid)}
+                      className="w-full flex items-center justify-center p-4 bg-background hover:bg-primary/10 border border-border hover:border-primary/30 rounded-2xl transition-all group"
+                    >
+                      <span className="font-bold text-lg text-white group-hover:text-primary transition-colors">{u.nickname}</span>
+                    </button>
+                  );
+                })}
+              {Object.keys(userItems).filter(uid => users[uid]?.nickname.toLowerCase().includes(guestSearchTerm.toLowerCase())).length === 0 && (
+                <div className="p-8 text-center text-secondary italic text-sm">Không tìm thấy anh em này...</div>
+              )}
+            </div>
           </div>
+        </div>
       )}
 
       {/* Re-selection button for guests */}
       {isOnlyBill && !user && selectedGuestUserId && (
-          <button 
-            onClick={() => setSelectedGuestUserId('')}
-            className="fixed bottom-6 right-6 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-full text-xs font-bold text-secondary hover:text-white z-50 shadow-lg flex items-center gap-2"
-          >
-              <Users size={14} /> Thay đổi người xem
-          </button>
+        <button
+          onClick={() => setSelectedGuestUserId('')}
+          className="fixed bottom-6 right-6 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-full text-xs font-bold text-secondary hover:text-white z-50 shadow-lg flex items-center gap-2"
+        >
+          <Users size={14} /> Thay đổi người xem
+        </button>
       )}
 
       {/* Bill Image Zoom Modal */}
       {showBillZoom && billImage && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in"
           onClick={() => setShowBillZoom(false)}
         >
@@ -631,8 +631,8 @@ const BillSplit: React.FC = () => {
           >
             <XCircle size={40} />
           </button>
-          <img 
-            src={billImage} 
+          <img
+            src={billImage}
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
@@ -656,12 +656,12 @@ const BillSplit: React.FC = () => {
           </h1>
           <p className="text-secondary mt-1">Công khai, minh bạch, tình cảm bền lâu</p>
         </div>
-        <Link 
+        <Link
           to={
-            (isOnlyBill && isAdmin && selectedPollId) 
-              ? `/only-bill/admin?pollId=${selectedPollId}&step=SELECT_MEMBERS` 
+            (isOnlyBill && isAdmin && selectedPollId)
+              ? `/only-bill/admin?pollId=${selectedPollId}&step=SELECT_MEMBERS`
               : (location.pathname.includes('/only-bill') ? "/only-bill" : "/")
-          } 
+          }
           className="text-secondary hover:text-white flex items-center gap-1 mt-2 md:mt-0"
         >
           <ArrowLeft size={16} /> Quay lại chọn danh sách tham gia
@@ -720,9 +720,8 @@ const BillSplit: React.FC = () => {
                     setShowBillZoom(true);
                   }
                 }}
-                className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${
-                  isAdmin ? 'cursor-pointer hover:border-primary' : (billImage ? 'cursor-pointer hover:border-primary' : 'cursor-default')
-                }`}
+                className={`w-full md:w-64 aspect-[3/4] bg-background border-2 border-dashed border-border rounded-xl flex items-center justify-center overflow-hidden relative ${isAdmin ? 'cursor-pointer hover:border-primary' : (billImage ? 'cursor-pointer hover:border-primary' : 'cursor-default')
+                  }`}
               >
                 {billImage ? (
                   <>
@@ -864,7 +863,7 @@ const BillSplit: React.FC = () => {
 
                       <div className="flex flex-col md:flex-row gap-6 items-center">
                         {/* QR Block */}
-                        <div 
+                        <div
                           onClick={() => setShowQRZoom(true)}
                           className="bg-white p-3 rounded-lg shadow-lg shrink-0 mx-auto md:mx-0 cursor-pointer hover:scale-105 transition-transform relative group"
                         >
@@ -908,7 +907,7 @@ const BillSplit: React.FC = () => {
                           <div className="text-sm text-center md:text-left bg-primary/10 p-2 rounded border border-primary/20">
                             {currentItem?.paymentCode ? (
                               <div className="text-secondary text-[11px] mb-1">
-                                Nội dung CK (Bắt buộc giữ mã <span className="text-primary font-bold">NHAUJS</span>): 
+                                Nội dung CK (Bắt buộc giữ mã <span className="text-primary font-bold">NHAUJS</span>):
                                 <span className="text-white font-bold select-all block mt-1 bg-background/50 p-2 rounded border border-white/10 text-base">{qrDesc}</span>
                               </div>
                             ) : (
@@ -949,7 +948,7 @@ const BillSplit: React.FC = () => {
                 <span className="text-sm font-black text-white">{Object.keys(userItems).length}</span>
               </div>
               <div className="flex items-center gap-2 bg-surface/50 border border-border px-3 py-1.5 rounded-xl shadow-sm">
-                 {/* Importing Beer icon if not available, oh wait, I check imports */}
+                {/* Importing Beer icon if not available, oh wait, I check imports */}
                 <Beer size={14} className="text-primary" />
                 <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Có nhậu:</span>
                 <span className="text-sm font-black text-white">
@@ -1008,8 +1007,8 @@ const BillSplit: React.FC = () => {
                               (u.name || '').toLowerCase().includes(search) ||
                               (u.email || '').toLowerCase().includes(search);
                           }).length > 0
-                              ? 'bg-primary border-primary text-black'
-                              : 'bg-transparent border-white/30'
+                            ? 'bg-primary border-primary text-black'
+                            : 'bg-transparent border-white/30'
                             }`}>
                             {(Object.values(userItems) as BillItem[]).filter(item => {
                               const u = getDisplayUser(item.userId);
@@ -1054,7 +1053,7 @@ const BillSplit: React.FC = () => {
                       (u.name || '').toLowerCase().includes(search) ||
                       (u.email || '').toLowerCase().includes(search);
                   })
-                  .sort((a,b) => {
+                  .sort((a, b) => {
                     if (sortMode === 'NONE') return 0;
                     if (sortMode === 'PAID') {
                       if (a.isPaid === b.isPaid) return 0;
@@ -1076,7 +1075,7 @@ const BillSplit: React.FC = () => {
                             <img src={displayUser.avatar} className={`w-10 h-10 rounded-full border border-surface ${isGhost ? 'grayscale' : ''}`} />
                           ) : (
                             <div className={`w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary font-black shrink-0 ${isGhost ? 'grayscale opacity-50' : ''}`}>
-                                {displayUser.nickname.charAt(0).toUpperCase()}
+                              {displayUser.nickname.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex flex-col">
@@ -1100,21 +1099,21 @@ const BillSplit: React.FC = () => {
                         <td className="px-4 py-3">
                           <MoneyInput
                             value={item.amount}
-                            onChange={val => handleItemChange(item.userId,'amount',val)}
+                            onChange={val => handleItemChange(item.userId, 'amount', val)}
                             disabled={!isAdmin}
                           />
                         </td>
                         <td className="px-4 py-3">
                           <MoneyInput
                             value={item.round2Amount}
-                            onChange={val => handleItemChange(item.userId,'round2Amount',val)}
+                            onChange={val => handleItemChange(item.userId, 'round2Amount', val)}
                             disabled={!isAdmin}
                           />
                         </td>
                         <td className="px-4 py-3">
                           <MoneyInput
                             value={item.taxiAmount || 0}
-                            onChange={val => handleItemChange(item.userId,'taxiAmount',val)}
+                            onChange={val => handleItemChange(item.userId, 'taxiAmount', val)}
                             disabled={!isAdmin}
                             placeholder={selectedPoll?.taxiVoters?.includes(item.userId) ? "Taxi 🚕" : "0"}
                           />
@@ -1133,7 +1132,7 @@ const BillSplit: React.FC = () => {
                                 type="checkbox"
                                 checked={item.isPaid}
                                 disabled={!isAdmin}
-                                onChange={e => handleItemChange(item.userId,'isPaid',e.target.checked)}
+                                onChange={e => handleItemChange(item.userId, 'isPaid', e.target.checked)}
                                 className={`w-6 h-6 accent-green-500 rounded cursor-pointer ${!isAdmin ? 'cursor-not-allowed opacity-70' : ''}`}
                               />
                             )}
@@ -1150,7 +1149,7 @@ const BillSplit: React.FC = () => {
                 {(() => {
                   const totalCollected = (Object.values(userItems) as BillItem[])
                     .filter(item => item.isPaid)
-                    .reduce((sum,item) => sum + (item.amount || 0) + (item.round2Amount || 0) + (item.taxiAmount || 0),0);
+                    .reduce((sum, item) => sum + (item.amount || 0) + (item.round2Amount || 0) + (item.taxiAmount || 0), 0);
 
                   const remaining = grandTotal - totalCollected;
 
@@ -1189,7 +1188,7 @@ const BillSplit: React.FC = () => {
 
           {/* QR Zoom Modal */}
           {showQRZoom && vietQrUrl && (
-            <div 
+            <div
               className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in"
               onClick={() => setShowQRZoom(false)}
             >
@@ -1200,23 +1199,23 @@ const BillSplit: React.FC = () => {
                 <XCircle size={40} />
               </button>
               <div className="bg-white p-6 rounded-3xl animate-in zoom-in-95 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                <img 
-                  src={vietQrUrl.replace('compact2.png', 'qr_only.png')} 
+                <img
+                  src={vietQrUrl.replace('compact2.png', 'qr_only.png')}
                   className="w-full aspect-square object-contain mb-4"
                 />
                 <div className="text-center">
-                   <div className="text-black font-black text-2xl mb-1">{bankName}</div>
-                   <div className="text-black font-bold text-xl mb-4">{bankAccount}</div>
-                   <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl">
-                      <div className="text-[10px] text-secondary uppercase font-bold">Nội dung chuyển khoản</div>
-                      <div className="text-primary font-black text-lg select-all">{qrDesc}</div>
-                   </div>
-                   <button 
+                  <div className="text-black font-black text-2xl mb-1">{bankName}</div>
+                  <div className="text-black font-bold text-xl mb-4">{bankAccount}</div>
+                  <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl">
+                    <div className="text-[10px] text-secondary uppercase font-bold">Nội dung chuyển khoản</div>
+                    <div className="text-primary font-black text-lg select-all">{qrDesc}</div>
+                  </div>
+                  <button
                     onClick={() => setShowQRZoom(false)}
                     className="mt-6 w-full py-4 bg-black text-white font-bold rounded-2xl"
-                   >
-                     Đóng
-                   </button>
+                  >
+                    Đóng
+                  </button>
                 </div>
               </div>
             </div>
@@ -1225,9 +1224,9 @@ const BillSplit: React.FC = () => {
           {/* Success Celebration Modal */}
           {showSuccessModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
-               <div className="bg-primary text-background p-8 rounded-3xl shadow-[0_0_50px_rgba(244,140,37,0.5)] flex flex-col items-center animate-in zoom-in-95 pointer-events-auto relative overflow-hidden">
-                  {/* Progress timer bar */}
-                  <style>{`
+              <div className="bg-primary text-background p-8 rounded-3xl shadow-[0_0_50px_rgba(244,140,37,0.5)] flex flex-col items-center animate-in zoom-in-95 pointer-events-auto relative overflow-hidden">
+                {/* Progress timer bar */}
+                <style>{`
                     @keyframes shrinkWidth {
                       from { width: 100%; }
                       to { width: 0%; }
@@ -1236,21 +1235,21 @@ const BillSplit: React.FC = () => {
                       animation: shrinkWidth 5s linear forwards;
                     }
                   `}</style>
-                  <div className="absolute top-0 left-0 h-1 bg-white/40 animate-shrink-width" />
-                  
-                  <div className="w-20 h-20 bg-background/20 rounded-full flex items-center justify-center mb-4 animate-bounce">
-                    <Check size={48} className="text-white" strokeWidth={4} />
-                  </div>
-                  <h2 className="text-3xl font-black mb-2 text-center text-white">THANH TOÁN XONG!</h2>
-                  <p className="font-bold text-center text-white opacity-90">Hệ thống đã ghi nhận tiền của bạn.<br/>Cảm ơn anh em đã uy tín! 🍻</p>
-                  
-                  <button 
-                    onClick={() => setShowSuccessModal(false)}
-                    className="absolute top-3 right-3 text-white/50 hover:text-white transition-colors"
-                  >
-                    <XCircle size={24} />
-                  </button>
-               </div>
+                <div className="absolute top-0 left-0 h-1 bg-white/40 animate-shrink-width" />
+
+                <div className="w-20 h-20 bg-background/20 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                  <Check size={48} className="text-white" strokeWidth={4} />
+                </div>
+                <h2 className="text-3xl font-black mb-2 text-center text-white">THANH TOÁN XONG!</h2>
+                <p className="font-bold text-center text-white opacity-90">Hệ thống đã ghi nhận tiền của bạn.<br />Cảm ơn anh em đã uy tín! 🍻</p>
+
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="absolute top-3 right-3 text-white/50 hover:text-white transition-colors"
+                >
+                  <XCircle size={24} />
+                </button>
+              </div>
             </div>
           )}
         </div>
