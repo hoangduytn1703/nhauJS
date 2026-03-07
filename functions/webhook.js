@@ -12,10 +12,10 @@ export async function onRequestPost({ request }) {
 
     if (transferType !== 'IN') return new Response(`Ignored: TransferType ${transferType}`, { status: 200 });
 
-    // 1. Tìm mã định danh (Regex lấy chữ NHAU/NHAUJS kèm 3-10 ký tự chữ/số)
-    const match = content.match(/NHAU(JS)?[A-Z0-9]{3,10}/i);
+    // 1. Tìm mã định danh (Hỗ trợ định dạng mới: 8K9 NHAUJS)
+    const match = content.match(/[A-Z0-9]{3}\s?NHAU(JS)?/i);
     if (!match) return new Response(`Ignored: No valid NHAUJS code in content "${content}"`, { status: 200 });
-    const paymentCode = match[0].toUpperCase();
+    const paymentCode = match[0].toUpperCase().replace(/\s+/g, '');
 
     const projectId = "nhaujs";
     

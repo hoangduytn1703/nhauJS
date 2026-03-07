@@ -366,7 +366,7 @@ const Vote: React.FC = () => {
             <span>🔥 Đang diễn ra</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black leading-tight tracking-tight text-white">
-            Chốt kèo lẹ lẹ END
+            Chốt kèo lẹ lẹ
           </h2>
         </div>
       </section>
@@ -462,7 +462,7 @@ const Vote: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="flex-1 md:pr-40">
                 <div className="flex items-center flex-wrap gap-2 mb-2">
-                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight">{poll.title}</h3>
+                  <h3 className="text-3xl md:text-4xl font-black text-white leading-tight">{poll.title}</h3>
                   <div className="flex items-center gap-2">
                     {poll.allowMultipleVotes && (
                       <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30 flex items-center gap-1 font-bold whitespace-nowrap">
