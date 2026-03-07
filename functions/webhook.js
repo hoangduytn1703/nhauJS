@@ -12,13 +12,13 @@ export async function onRequestPost({ request }) {
 
     if (transferType !== 'IN') return new Response(`Ignored: TransferType ${transferType}`, { status: 200 });
 
-    // 1. Tìm mã định danh (Hỗ trợ định dạng mới: 8K9 NHAUJS)
-    const match = content.match(/[A-Z0-9]{3}\s?NHAU(JS)?/i);
+    // 1. Tìm mã định danh (Hỗ trợ định dạng gốc: NHAUJS [MÃ])
+    const match = content.match(/NHAU(JS)?\s?[A-Z0-9]{3,10}/i);
     if (!match) return new Response(`Ignored: No valid NHAUJS code in content "${content}"`, { status: 200 });
     const paymentCode = match[0].toUpperCase().replace(/\s+/g, '');
 
     const projectId = "nhaujs";
-    
+
     // 2. Tra cứu Mapping (Lấy UID, PollID, Prefix)
     const mappingRes = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/payment_mappings/${paymentCode}`);
     if (!mappingRes.ok) return new Response(`Ignored: Payment code ${paymentCode} not mapped in database`, { status: 200 });
@@ -76,9 +76,9 @@ export async function onRequestPost({ request }) {
     });
 
     if (!writeRes.ok) {
-        const errorText = await writeRes.text();
-        console.error("Firestore Write Failed:", errorText);
-        return new Response(`Update Database Failed: ${errorText}`, { status: 500 });
+      const errorText = await writeRes.text();
+      console.error("Firestore Write Failed:", errorText);
+      return new Response(`Update Database Failed: ${errorText}`, { status: 500 });
     }
 
     console.log(`[SePay Success] Updated Poll ${pollId} for User ${userId}`);
