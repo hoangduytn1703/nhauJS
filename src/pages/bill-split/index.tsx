@@ -470,8 +470,8 @@ const BillSplit: React.FC = () => {
       const itemsWithCodes = { ...userItems };
       Object.keys(itemsWithCodes).forEach(uid => {
           if (!itemsWithCodes[uid].isPaid && !itemsWithCodes[uid].paymentCode) {
-              const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
-              itemsWithCodes[uid].paymentCode = `NHAUJS${randomStr}`;
+              const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 chars
+              itemsWithCodes[uid].paymentCode = `${randomStr}NHAUJS`; // Now stored as 8K9NHAUJS
           }
       });
 
@@ -535,10 +535,17 @@ const BillSplit: React.FC = () => {
   // NẾU CÓ paymentCode THÌ PHẢI ĐƯA VÀO NỘI DUNG CHUYỂN KHOẢN ĐỂ SEPAY NHẬN DIỆN
   const currentItem = effectiveUserId && userItems[effectiveUserId];
   const pollTitleRaw = selectedPoll?.title || '';
-  // Format: [Mã] [Tên] [Kèo] - VD: NHAUABCD DUY KEO_LAU
+  // Format: [Mã] [Tên] [Kèo] [Ngày] - VD: NHAUJS8K9 DUY NHAU_LAU 07/03/2026
+  const pollDate = selectedPoll?.resultDate || selectedPoll?.createdAt || Date.now();
+  const dateStr = new Date(Number(pollDate)).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).replace(/\//g, '/'); // Ensure dd/mm/yyyy
+
   const qrDesc = currentItem?.paymentCode 
-    ? `${currentItem.paymentCode} ${currentDisplayName} ${pollTitleRaw}`.substring(0, 50)
-    : `${currentDisplayName} thanh toan ${pollTitleRaw}`;
+    ? `${currentItem.paymentCode.replace('NHAUJS', ' NHAUJS')} ${currentDisplayName} ${pollTitleRaw} ${dateStr}`.substring(0, 50).trim()
+    : `${currentDisplayName} thanh toan ${pollTitleRaw} ${dateStr}`.substring(0, 50).trim();
     
   const vietQrUrl = `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact2.png?amount=${userTotalAmount}&addInfo=${encodeURIComponent(qrDesc)}&accountName=${encodeURIComponent(accountHolder)}`;
 
