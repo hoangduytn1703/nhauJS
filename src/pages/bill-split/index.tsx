@@ -84,6 +84,9 @@ const BillSplit: React.FC = () => {
   const [sortMode,setSortMode] = useState<'NONE' | 'PAID' | 'UNPAID'>('NONE');
   const [isDirty,setIsDirty] = useState(false);
   const [showBillZoom, setShowBillZoom] = useState(false);
+  const [showQRZoom, setShowQRZoom] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const prevPaidRef = useRef<boolean | undefined>(undefined);
 
   // Helper to round up to nearest 1,000
   const roundToThousand = (val: number) => Math.ceil(val / 1000) * 1000;
@@ -224,8 +227,24 @@ const BillSplit: React.FC = () => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data.bill && data.bill.items) {
+           const items = data.bill.items;
+           
+           // Detect payment success for CURRENT user
+           if (effectiveUserId && items[effectiveUserId]) {
+              const currentlyPaid = !!items[effectiveUserId].isPaid;
+              
+              // If status changed from FALSE to TRUE
+              if (prevPaidRef.current === false && currentlyPaid === true) {
+                 setShowSuccessModal(true);
+                 // Auto close after 5s
+                 setTimeout(() => setShowSuccessModal(false), 5000);
+              }
+              
+              prevPaidRef.current = currentlyPaid;
+           }
+
            // Cập nhật trạng thái đóng tiền ngay lập tức lên UI
-           setUserItems(data.bill.items);
+           setUserItems(items);
            console.log("[Real-time] Bill updated from server!");
         }
       }
@@ -838,9 +857,15 @@ const BillSplit: React.FC = () => {
 
                       <div className="flex flex-col md:flex-row gap-6 items-center">
                         {/* QR Block */}
-                        <div className="bg-white p-3 rounded-lg shadow-lg shrink-0 mx-auto md:mx-0">
+                        <div 
+                          onClick={() => setShowQRZoom(true)}
+                          className="bg-white p-3 rounded-lg shadow-lg shrink-0 mx-auto md:mx-0 cursor-pointer hover:scale-105 transition-transform relative group"
+                        >
                           <img src={vietQrUrl} className="w-40 h-40 object-contain" alt="VietQR" />
-                          <div className="text-center text-black text-xs font-bold mt-1">{bankName}: {bankAccount}</div>
+                          <div className="text-center text-black text-[10px] font-bold mt-1">{bankName}: {bankAccount}</div>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 flex items-center justify-center transition-colors rounded-lg">
+                            <Search size={24} className="text-black opacity-0 group-hover:opacity-40 transition-opacity" />
+                          </div>
                         </div>
 
                         {/* Text Info */}
@@ -1152,6 +1177,73 @@ const BillSplit: React.FC = () => {
               >
                 <Save size={24} /> {saving ? 'Đang lưu...' : 'Lưu Bill'}
               </button>
+            </div>
+          )}
+
+          {/* QR Zoom Modal */}
+          {showQRZoom && vietQrUrl && (
+            <div 
+              className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in"
+              onClick={() => setShowQRZoom(false)}
+            >
+              <button
+                onClick={() => setShowQRZoom(false)}
+                className="absolute top-4 right-4 text-white hover:text-primary transition-colors z-10"
+              >
+                <XCircle size={40} />
+              </button>
+              <div className="bg-white p-6 rounded-3xl animate-in zoom-in-95 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                <img 
+                  src={vietQrUrl.replace('compact2.png', 'qr_only.png')} 
+                  className="w-full aspect-square object-contain mb-4"
+                />
+                <div className="text-center">
+                   <div className="text-black font-black text-2xl mb-1">{bankName}</div>
+                   <div className="text-black font-bold text-xl mb-4">{bankAccount}</div>
+                   <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl">
+                      <div className="text-[10px] text-secondary uppercase font-bold">Nội dung chuyển khoản</div>
+                      <div className="text-primary font-black text-lg select-all">{qrDesc}</div>
+                   </div>
+                   <button 
+                    onClick={() => setShowQRZoom(false)}
+                    className="mt-6 w-full py-4 bg-black text-white font-bold rounded-2xl"
+                   >
+                     Đóng
+                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Celebration Modal */}
+          {showSuccessModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
+               <div className="bg-primary text-background p-8 rounded-3xl shadow-[0_0_50px_rgba(244,140,37,0.5)] flex flex-col items-center animate-in zoom-in-95 pointer-events-auto relative overflow-hidden">
+                  {/* Progress timer bar */}
+                  <style>{`
+                    @keyframes shrinkWidth {
+                      from { width: 100%; }
+                      to { width: 0%; }
+                    }
+                    .animate-shrink-width {
+                      animation: shrinkWidth 5s linear forwards;
+                    }
+                  `}</style>
+                  <div className="absolute top-0 left-0 h-1 bg-white/40 animate-shrink-width" />
+                  
+                  <div className="w-20 h-20 bg-background/20 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                    <Check size={48} className="text-white" strokeWidth={4} />
+                  </div>
+                  <h2 className="text-3xl font-black mb-2 text-center text-white">THANH TOÁN XONG!</h2>
+                  <p className="font-bold text-center text-white opacity-90">Hệ thống đã ghi nhận tiền của bạn.<br/>Cảm ơn anh em đã uy tín! 🍻</p>
+                  
+                  <button 
+                    onClick={() => setShowSuccessModal(false)}
+                    className="absolute top-3 right-3 text-white/50 hover:text-white transition-colors"
+                  >
+                    <XCircle size={24} />
+                  </button>
+               </div>
             </div>
           )}
         </div>
