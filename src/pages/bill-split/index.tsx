@@ -236,8 +236,9 @@ const BillSplit: React.FC = () => {
             // If status changed from FALSE to TRUE
             if (prevPaidRef.current === false && currentlyPaid === true) {
               setShowSuccessModal(true);
-              // Auto close after 5s
-              setTimeout(() => setShowSuccessModal(false), 5000);
+              setShowQRZoom(false); // Tắt QR đang mở khi hiện modal thành công
+              // Auto close after 8s
+              setTimeout(() => setShowSuccessModal(false), 8000);
             }
 
             prevPaidRef.current = currentlyPaid;
@@ -1189,7 +1190,7 @@ const BillSplit: React.FC = () => {
           {/* QR Zoom Modal */}
           {showQRZoom && vietQrUrl && (
             <div
-              className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in"
+              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
               onClick={() => setShowQRZoom(false)}
             >
               <button
@@ -1232,7 +1233,7 @@ const BillSplit: React.FC = () => {
                       to { width: 0%; }
                     }
                     .animate-shrink-width {
-                      animation: shrinkWidth 5s linear forwards;
+                      animation: shrinkWidth 8s linear forwards;
                     }
                   `}</style>
                 <div className="absolute top-0 left-0 h-1 bg-white/40 animate-shrink-width" />
